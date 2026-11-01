@@ -78,6 +78,7 @@ const SECTIONS = [
       ["delivery_date", "Delivery date", "date"],
       ["comm_channel", "Communication channel", "text"],
       ["agreement_date", "Agreement date (blank = today)", "date"],
+      ["jurisdiction", "Jurisdiction (courts at)", "text"],
       ["show_note", "Show “not legal advice” note on the agreement", "check", "full"],
     ],
   },
@@ -89,6 +90,8 @@ const SECTIONS = [
       ["provider_email", "Email", "email"],
       ["provider_phone", "Phone", "text"],
       ["provider_address", "Address", "text", "full"],
+      ["provider_website", "Website", "text"],
+      ["provider_gstin", "GSTIN (optional)", "text"],
     ],
   },
 ];
