@@ -3,19 +3,18 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
+    "preview": "next build && next start",
     "lint": "next lint"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.0",
     "bcryptjs": "^3.0.2",
-    "framer-motion": "^12.0.0",
     "jose": "^5.10.0",
     "lucide-react": "^0.511.0",
-    "next": "^15.3.0",
-    "next-sitemap": "^4.2.3",
+    "next": "^15.5.28",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
@@ -26,5 +25,12 @@
     "eslint-config-next": "^15.3.0",
     "postcss": "^8.5.15",
     "tailwindcss": "^4.3.0"
-  }
+  },
+  "browserslist": [
+    "chrome >= 111",
+    "edge >= 111",
+    "firefox >= 111",
+    "safari >= 16.4",
+    "ios_saf >= 16.4"
+  ]
 }

@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { getServiceClient } from "../../../lib/supabase";
+import { rateLimit, clientIp } from "../../../lib/ratelimit";
 
 export async function POST(req) {
   try {
-    const { email } = await req.json();
-    if (!email?.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+    if (!rateLimit(`news:${clientIp(req)}`, { limit: 5, windowMs: 10 * 60 * 1000 })) {
+      return NextResponse.json({ error: "Too many attempts. Please try again later." }, { status: 429 });
+    }
+    const body = await req.json();
+    const email = typeof body?.email === "string" ? body.email.trim().toLowerCase().slice(0, 200) : "";
+    if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
       return NextResponse.json({ error: "Invalid email" }, { status: 400 });
     }
 

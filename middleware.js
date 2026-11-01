@@ -21,11 +21,13 @@ export async function middleware(req) {
     );
   }
 
+  const secret = process.env.JWT_SECRET || (process.env.NODE_ENV !== "production" ? "dev-only-secret-not-for-production-use-0000" : "");
+  if (secret.length < 16) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
-    await jwtVerify(
-      token,
-      new TextEncoder().encode(process.env.JWT_SECRET)
-    );
+    await jwtVerify(token, new TextEncoder().encode(secret));
 
     return NextResponse.next();
   } catch {
@@ -41,6 +43,10 @@ export const config = {
     "/api/admin/transactions/:path*",
     "/api/admin/messages/:path*",
     "/api/admin/brands/:path*",
+    "/api/admin/packages/:path*",
+    "/api/admin/testimonials/:path*",
+    "/api/admin/onboarding/:path*",
+    "/api/admin/docs/:path*",
     "/api/admin/visits/:path*",
     "/api/admin/logout/:path*",
   ],

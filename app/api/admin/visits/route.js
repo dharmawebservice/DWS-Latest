@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAdminSession } from "../../../../lib/auth";
 import { getServiceClient } from "../../../../lib/supabase";
+import { isBot } from "../../../../lib/bots";
 
 async function auth() {
   const session = await getAdminSession();
@@ -26,14 +27,15 @@ export async function GET() {
 
   const { data: allRows, error: allErr } = await supabase
     .from("page_visits")
-    .select("visitor_ip, visit_date, page_path, hit_count");
+    .select("visitor_ip, visit_date, page_path, hit_count, user_agent");
 
   if (allErr) {
     console.error("Visits fetch error:", allErr);
     return NextResponse.json({ error: allErr.message }, { status: 500 });
   }
 
-  const rows = allRows || [];
+  // Hide bot/crawler/unknown traffic, including rows recorded before filtering existed.
+  const rows = (allRows || []).filter((r) => r.visitor_ip && r.visitor_ip !== "unknown" && !isBot(r.user_agent));
 
   const totalHits = rows.reduce((s, r) => s + (r.hit_count || 1), 0);
 

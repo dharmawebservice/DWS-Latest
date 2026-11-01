@@ -1,12 +1,18 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-async function adminFetch(url, options = {}) {
-  return fetch(url, {
-    credentials: "include",
-    cache: "no-store",
-    ...options,
-  });
-}
+import {
+  Receipt, Tag, Mail, BarChart3, LogOut, Plus, Pencil, Trash2, X,
+  RefreshCw, Lock, ExternalLink, Inbox, Radio, Check, Reply,
+  Package, Quote, Link2, FileText,
+} from "lucide-react";
+import {
+  adminFetch, api, LoadingState, EmptyState, ErrorState, Modal, ModalHeader, FOCUS,
+} from "./ui";
+import PackagesTab from "./PackagesTab";
+import TestimonialsTab from "./TestimonialsTab";
+import OnboardingTab from "./OnboardingTab";
+import dynamic from "next/dynamic";
+const DocumentsTab = dynamic(() => import("./DocumentsTab"), { ssr: false, loading: () => <LoadingState text="Loading documents…" /> });
 
 /* ── helpers ─────────────────────────────────────────────────────────────── */
 function fmt(n) { return Number(n || 0).toLocaleString("en-IN"); }
@@ -27,32 +33,34 @@ function LoginScreen({ onLogin }) {
     });
     setLoading(false);
     if (res.ok) onLogin();
+    else if (res.status === 429) setError("Too many attempts. Please wait a few minutes and try again.");
     else setError("Incorrect password. Try again.");
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4"
-         style={{ background: "#0b0b12" }}>
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <img src="/dws-logo.png" alt="DWS"
-               className="h-16 w-auto object-contain mx-auto mb-5"
-               style={{ filter: "drop-shadow(0 0 16px rgba(212,175,55,0.4))" }} />
-          <h1 className="text-xl font-bold text-white">Admin Access</h1>
-          <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.4)" }}>
-            Enter your password to continue
+    <div className="min-h-screen flex items-center justify-center px-4 bg-bg">
+      <div className="card w-full max-w-sm p-8 sm:p-10">
+        <div className="text-center mb-7">
+          <img src="/dws-mark.png" alt="Dharma Web Services"
+               className="h-10 w-auto object-contain mx-auto mb-5" />
+          <h1 className="font-display text-4xl font-normal text-ink">Dharma Vault</h1>
+          <p className="text-sm mt-2 text-mute">
+            Private workspace for Dharma Web Services
           </p>
         </div>
-        <form onSubmit={handleLogin}
-              className="rounded-2xl border p-7 space-y-4"
-              style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(212,175,55,0.15)" }}>
-          <input type="password" placeholder="Password" value={password}
-                 onChange={e => setPassword(e.target.value)}
-                 className="admin-input" autoFocus required />
-          {error && <p className="text-red-400 text-sm">{error}</p>}
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <label htmlFor="vault-password" className="field-label">
+              <span className="inline-flex items-center gap-1.5"><Lock size={12} aria-hidden="true" /> Password</span>
+            </label>
+            <input id="vault-password" type="password" placeholder="Enter password" value={password}
+                   onChange={e => setPassword(e.target.value)}
+                   className="field" autoFocus required />
+          </div>
+          {error && <p className="text-bad text-sm" role="alert">{error}</p>}
           <button type="submit" disabled={loading}
-                  className="w-full py-3 rounded-xl gradient-btn font-semibold text-sm disabled:opacity-60 flex items-center justify-center gap-2">
-            {loading ? <><span className="spinner" /> Verifying…</> : "Enter →"}
+                  className="btn btn-primary w-full disabled:opacity-60 flex items-center justify-center gap-2">
+            {loading ? <><span className="spinner" /> Verifying…</> : "Enter"}
           </button>
         </form>
       </div>
@@ -61,13 +69,15 @@ function LoginScreen({ onLogin }) {
 }
 
 /* ── Stat Card ───────────────────────────────────────────────────────────── */
-function StatCard({ label, value, sub, accent = "#d4af37" }) {
+function StatCard({ label, value, sub, icon: Icon }) {
   return (
-    <div className="rounded-2xl border p-5"
-         style={{ background: "rgba(255,255,255,0.025)", borderColor: "rgba(255,255,255,0.08)" }}>
-      <p className="text-xs mb-2" style={{ color: "rgba(255,255,255,0.4)" }}>{label}</p>
-      <p className="text-2xl font-bold text-white">{value}</p>
-      {sub && <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.3)" }}>{sub}</p>}
+    <div className="card p-5">
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <p className="text-[11px] uppercase tracking-wider text-mute font-medium">{label}</p>
+        {Icon && <span className="icon-tile"><Icon size={16} aria-hidden="true" /></span>}
+      </div>
+      <p className="font-display text-3xl sm:text-4xl font-normal text-ink leading-tight">{value}</p>
+      {sub && <p className="text-xs mt-1 text-mute">{sub}</p>}
     </div>
   );
 }
@@ -79,7 +89,7 @@ function BarChart({ data = [] }) {
   const max     = Math.max(...visible.map(d => d.unique), 1);
 
   return (
-    <div className="flex items-end gap-[2px] sm:gap-[3px] h-20 w-full">
+    <div className="flex items-end gap-[2px] sm:gap-[3px] h-24 w-full border-b border-line">
       {visible.map((d, i) => {
         const pct      = Math.max((d.unique / max) * 100, d.unique > 0 ? 6 : 2);
         const isToday  = i === visible.length - 1;
@@ -88,17 +98,16 @@ function BarChart({ data = [] }) {
           <div key={d.date} className="relative group flex-1 flex flex-col justify-end h-full">
             <div style={{
               height: `${pct}%`,
-              background: isToday ? "#d4af37" : isWeekend ? "rgba(192,200,216,0.35)" : "rgba(255,255,255,0.18)",
+              background: isToday ? "#b68a2e" : isWeekend ? "#d6d1c3" : "#14213d",
               borderRadius: "2px 2px 0 0",
               transition: "background 0.2s",
               minHeight: d.unique > 0 ? "4px" : "2px",
             }} />
             {/* tooltip */}
             <div className="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 z-20 px-2 py-1
-                            rounded-lg border whitespace-nowrap text-[11px] text-white
-                            opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-                 style={{ background: "#1a1a2e", borderColor: "rgba(212,175,55,0.25)" }}>
-              {d.label}: <span className="font-bold">{d.unique}</span>
+                            rounded-lg border border-line bg-paper shadow-soft whitespace-nowrap text-[11px] text-ink
+                            opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+              {d.label}: <span className="font-semibold">{d.unique}</span>
             </div>
           </div>
         );
@@ -130,22 +139,15 @@ function VisitorsTab() {
 
   useEffect(() => { loadStats(); }, []);
 
-  if (loading) return (
-    <div className="text-center py-24 flex flex-col items-center gap-3">
-      <div className="spinner" />
-      <p style={{ color: "rgba(255,255,255,0.3)" }}>Loading analytics…</p>
-    </div>
-  );
+  if (loading) return <LoadingState text="Loading analytics…" />;
 
   if (error) return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-red-500/20 p-6 text-center"
-           style={{ background: "rgba(239,68,68,0.05)" }}>
-        <p className="text-red-400 font-medium mb-1">Could not load visitor data</p>
-        <p className="text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>{error}</p>
+      <div className="card p-6 text-center">
+        <p className="text-bad font-medium mb-1">Could not load visitor data</p>
+        <p className="text-sm text-mute">{error}</p>
         <button onClick={loadStats}
-                className="mt-4 px-4 py-2 rounded-xl text-sm font-medium"
-                style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}>
+                className={`btn btn-ghost btn-sm mt-4 ${FOCUS}`}>
           Try Again
         </button>
       </div>
@@ -161,7 +163,7 @@ function VisitorsTab() {
     <div className="space-y-6">
       {/* KPI row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Today's Visitors" value={fmt(stats.todayUnique)}
+        <StatCard label="Today's Visitors" value={fmt(stats.todayUnique)} icon={BarChart3}
           sub={trend !== null ? `${trend >= 0 ? "+" : ""}${trend}% vs yesterday` : "First day tracked"} />
         <StatCard label="Yesterday" value={fmt(stats.yesterdayUnique)} sub="Unique visitors" />
         <StatCard label="Last 30 Days" value={fmt(stats.last30Unique)} sub="Unique visitors" />
@@ -169,40 +171,37 @@ function VisitorsTab() {
       </div>
 
       {/* Chart */}
-      <div className="rounded-2xl border p-5 sm:p-6"
-           style={{ background: "rgba(255,255,255,0.025)", borderColor: "rgba(255,255,255,0.08)" }}>
-        <div className="flex items-center justify-between mb-5">
+      <div className="card p-5 sm:p-6">
+        <div className="flex items-center justify-between mb-5 gap-3">
           <div>
-            <h3 className="font-semibold text-white text-sm">Daily Unique Visitors</h3>
-            <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>Last 30 days</p>
+            <h3 className="font-display text-2xl font-normal text-ink">Daily Unique Visitors</h3>
+            <p className="text-xs mt-0.5 text-mute">Last 30 days</p>
           </div>
           <button onClick={loadStats}
-                  className="text-xs px-3 py-1.5 rounded-lg transition-colors"
-                  style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)" }}>
-            ↻ Refresh
+                  className={`btn btn-ghost btn-sm inline-flex items-center gap-1.5 ${FOCUS}`}>
+            <RefreshCw size={13} aria-hidden="true" /> Refresh
           </button>
         </div>
         <BarChart data={stats.daily} />
         {stats.daily?.length > 0 && (
-          <div className="flex justify-between mt-2 text-[10px]"
-               style={{ color: "rgba(255,255,255,0.25)" }}>
+          <div className="flex justify-between mt-2 text-[10px] text-mute">
             <span>{stats.daily[0]?.label}</span>
             <span>{stats.daily[Math.floor(stats.daily.length / 2)]?.label}</span>
             <span>{stats.daily[stats.daily.length - 1]?.label} (today)</span>
           </div>
         )}
         {/* Legend */}
-        <div className="flex gap-4 mt-4 text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>
+        <div className="flex gap-4 mt-4 text-[11px] text-mute">
           <span className="flex items-center gap-1.5">
-            <span className="w-3 h-2 rounded-sm inline-block" style={{ background: "#d4af37" }} />
+            <span className="w-3 h-2 rounded-sm inline-block" style={{ background: "#b68a2e" }} />
             Today
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-3 h-2 rounded-sm inline-block" style={{ background: "rgba(192,200,216,0.35)" }} />
+            <span className="w-3 h-2 rounded-sm inline-block" style={{ background: "#d6d1c3" }} />
             Weekend
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-3 h-2 rounded-sm inline-block" style={{ background: "rgba(255,255,255,0.18)" }} />
+            <span className="w-3 h-2 rounded-sm inline-block" style={{ background: "#14213d" }} />
             Weekday
           </span>
         </div>
@@ -210,21 +209,20 @@ function VisitorsTab() {
 
       {/* Top pages */}
       {stats.topPages?.length > 0 && (
-        <div className="rounded-2xl border p-5 sm:p-6"
-             style={{ background: "rgba(255,255,255,0.025)", borderColor: "rgba(255,255,255,0.08)" }}>
-          <h3 className="font-semibold text-white text-sm mb-4">Top Pages Today</h3>
+        <div className="card p-5 sm:p-6">
+          <h3 className="font-display text-2xl font-normal text-ink mb-4">Top Pages Today</h3>
           <div className="space-y-3">
             {stats.topPages.map(({ path, count }) => {
               const maxCount = stats.topPages[0]?.count || 1;
               return (
                 <div key={path}>
                   <div className="flex justify-between text-xs mb-1">
-                    <span style={{ color: "rgba(255,255,255,0.65)" }}>{path || "/"}</span>
-                    <span className="font-semibold" style={{ color: "#d4af37" }}>{count}</span>
+                    <span className="text-ink-2">{path || "/"}</span>
+                    <span className="font-semibold text-ink">{count}</span>
                   </div>
-                  <div className="rounded-full h-1.5 w-full" style={{ background: "rgba(255,255,255,0.07)" }}>
+                  <div className="rounded-full h-1.5 w-full bg-sand">
                     <div className="h-1.5 rounded-full"
-                         style={{ width: `${(count / maxCount) * 100}%`, background: "linear-gradient(90deg,#d4af37,#f0d060)" }} />
+                         style={{ width: `${(count / maxCount) * 100}%`, background: "linear-gradient(90deg,#b68a2e,#0f1115)" }} />
                   </div>
                 </div>
               );
@@ -234,10 +232,9 @@ function VisitorsTab() {
       )}
 
       {/* Daily table */}
-      <div className="rounded-2xl border p-5 sm:p-6"
-           style={{ background: "rgba(255,255,255,0.025)", borderColor: "rgba(255,255,255,0.08)" }}>
-        <h3 className="font-semibold text-white text-sm mb-4">Daily Breakdown — Last 30 Days</h3>
-        <div className="overflow-x-auto">
+      <div>
+        <h3 className="font-display text-2xl font-normal text-ink mb-3">Daily Breakdown — Last 30 Days</h3>
+        <div className="card overflow-x-auto">
           <table className="admin-table w-full">
             <thead>
               <tr>
@@ -253,22 +250,21 @@ function VisitorsTab() {
                 const isToday = d.date === new Date().toISOString().split("T")[0];
                 return (
                   <tr key={d.date}>
-                    <td className="text-sm" style={{ color: "rgba(255,255,255,0.7)" }}>
+                    <td className="text-sm text-ink-2">
                       {d.label}
                       {isToday && (
-                        <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full"
-                              style={{ background: "rgba(212,175,55,0.2)", color: "#d4af37" }}>
+                        <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-gold-soft text-gold-ink font-medium">
                           today
                         </span>
                       )}
                     </td>
-                    <td className="font-bold text-white text-sm">{d.unique}</td>
+                    <td className="font-semibold text-ink text-sm">{d.unique}</td>
                     <td>
-                      <div className="rounded-full h-1.5 w-full" style={{ background: "rgba(255,255,255,0.07)" }}>
+                      <div className="rounded-full h-1.5 w-full bg-sand">
                         <div className="h-1.5 rounded-full transition-all"
                              style={{
                                width: `${pct}%`,
-                               background: isToday ? "#d4af37" : "rgba(255,255,255,0.3)",
+                               background: isToday ? "#b68a2e" : "#14213d",
                              }} />
                       </div>
                     </td>
@@ -287,21 +283,19 @@ function VisitorsTab() {
 
 function SetupGuide() {
   return (
-    <div className="rounded-2xl border p-5"
-         style={{ background: "rgba(212,175,55,0.04)", borderColor: "rgba(212,175,55,0.2)" }}>
-      <p className="text-xs font-semibold mb-2" style={{ color: "rgba(212,175,55,0.9)" }}>
-        📡 Visitor Tracking Setup
+    <div className="panel p-5">
+      <p className="eyebrow flex items-center gap-1.5 mb-2">
+        <Radio size={13} aria-hidden="true" /> Visitor Tracking Setup
       </p>
-      <p className="text-xs leading-relaxed mb-3" style={{ color: "rgba(255,255,255,0.45)" }}>
+      <p className="text-xs leading-relaxed mb-3 text-ink-2">
         1. Run the SQL below in your Supabase SQL editor to create the table.
-        <br />2. Add the tracking call to your <code className="px-1 rounded text-xs" style={{ background: "rgba(255,255,255,0.1)", color: "#f0d060" }}>layout.js</code>.
+        <br />2. Add the tracking call to your <code className="px-1 rounded text-xs bg-paper border border-line text-ink">layout.js</code>.
       </p>
       <details className="group">
-        <summary className="text-xs cursor-pointer font-medium" style={{ color: "#d4af37" }}>
-          Show SQL Migration ▾
+        <summary className={`text-xs cursor-pointer font-medium text-gold-ink rounded ${FOCUS}`}>
+          Show SQL Migration
         </summary>
-        <pre className="mt-3 p-3 rounded-xl overflow-x-auto text-[11px] leading-relaxed"
-             style={{ background: "rgba(0,0,0,0.4)", color: "rgba(255,255,255,0.6)" }}>
+        <pre className="mt-3 p-3 rounded-xl overflow-x-auto text-[11px] leading-relaxed bg-paper border border-line text-ink-2">
 {`CREATE TABLE IF NOT EXISTS page_visits (
   id           bigserial PRIMARY KEY,
   visitor_ip   text NOT NULL,
@@ -321,11 +315,10 @@ ALTER TABLE page_visits ENABLE ROW LEVEL SECURITY;`}
         </pre>
       </details>
       <details className="group mt-3">
-        <summary className="text-xs cursor-pointer font-medium" style={{ color: "#d4af37" }}>
-          Show layout.js tracking call ▾
+        <summary className={`text-xs cursor-pointer font-medium text-gold-ink rounded ${FOCUS}`}>
+          Show layout.js tracking call
         </summary>
-        <pre className="mt-3 p-3 rounded-xl overflow-x-auto text-[11px] leading-relaxed"
-             style={{ background: "rgba(0,0,0,0.4)", color: "rgba(255,255,255,0.6)" }}>
+        <pre className="mt-3 p-3 rounded-xl overflow-x-auto text-[11px] leading-relaxed bg-paper border border-line text-ink-2">
 {`// Add this to your app/layout.js inside a useEffect
 // (wrap in a Client Component or inline script)
 useEffect(() => {
@@ -351,24 +344,22 @@ const EMPTY_FORM = {
 
 const PAY_METHODS = [
   { value: "",                   label: "— Select Method —" },
-  { value: "UPI",                label: "💸 UPI" },
-  { value: "Cash",               label: "💵 Cash" },
-  { value: "Account Transfer",   label: "🏦 Account Transfer" },
-  { value: "Cheque",             label: "📄 Cheque" },
+  { value: "UPI",                label: "UPI" },
+  { value: "Cash",               label: "Cash" },
+  { value: "Account Transfer",   label: "Account Transfer" },
+  { value: "Cheque",             label: "Cheque" },
   { value: "Other",              label: "Other" },
 ];
 
 function StatusBadge({ s }) {
   const map = {
-    paid:      { bg: "rgba(16,185,129,0.15)",  color: "#34d399" },
-    pending:   { bg: "rgba(245,158,11,0.15)",  color: "#fbbf24" },
-    partial:   { bg: "rgba(59,130,246,0.15)",  color: "#60a5fa" },
-    cancelled: { bg: "rgba(239,68,68,0.15)",   color: "#f87171" },
+    paid:      "badge badge-paid",
+    pending:   "badge badge-pending",
+    partial:   "badge badge-partial",
+    cancelled: "badge badge-cancelled",
   };
-  const style = map[s] || map.pending;
   return (
-    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-          style={style}>
+    <span className={map[s] || map.pending}>
       {s}
     </span>
   );
@@ -450,7 +441,7 @@ function TransactionsTab() {
     <div>
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Total Records"     value={fmt(txns.length)} />
+        <StatCard label="Total Records"     value={fmt(txns.length)} icon={Receipt} />
         <StatCard label="Revenue Collected" value={`₹${fmt(totalRevenue)}`} />
         <StatCard label="Pending Amount"    value={`₹${fmt(pending)}`} />
         <StatCard label="Paid Projects"     value={fmt(txns.filter(t => t.payment_status === "paid").length)} />
@@ -458,109 +449,98 @@ function TransactionsTab() {
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2 mb-5">
-        <div className="flex gap-1.5 flex-wrap">
+        <div className="flex gap-1.5 flex-wrap" role="group" aria-label="Filter by status">
           {FILTERS.map(s => (
             <button key={s} onClick={() => setFilter(s)}
-                    className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all capitalize"
-                    style={filter === s
-                      ? { background: "#d4af37", color: "#000" }
-                      : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)" }}>
+                    aria-pressed={filter === s}
+                    className={`btn btn-sm capitalize ${filter === s ? "btn-primary" : "btn-ghost"} ${FOCUS}`}>
               {s}
             </button>
           ))}
         </div>
         <button onClick={openNew}
-                className="ml-auto px-4 py-2 rounded-xl gradient-btn font-semibold text-xs">
-          + Add Transaction
+                className={`btn btn-primary btn-sm ml-auto inline-flex items-center gap-1.5 ${FOCUS}`}>
+          <Plus size={14} aria-hidden="true" /> Add Transaction
         </button>
       </div>
 
       {/* Modal */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-     style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}>
-          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border p-6"
-               style={{ background: "#13131f", borderColor: "rgba(255,255,255,0.1)" }}
-               onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="font-bold text-white">{editTxn ? "Edit Transaction" : "New Transaction"}</h3>
-              <button type="button" onClick={closeForm}
-                      className="text-lg" style={{ color: "rgba(255,255,255,0.4)" }}>✕</button>
-            </div>
-            <form onSubmit={handleSave} className="space-y-3">
-              {[
-                { key: "client_name",  label: "Client Name *",      type: "text"   },
-                { key: "client_email", label: "Email",               type: "email"  },
-                { key: "client_phone", label: "Phone / WhatsApp",    type: "tel"    },
-                { key: "service_type", label: "Service Type",        type: "text"   },
-                { key: "package_name", label: "Package",             type: "text"   },
-                { key: "amount",       label: "Amount (₹) *",        type: "number" },
-                { key: "project_url",  label: "Project URL",         type: "url"    },
-                { key: "deadline",     label: "Deadline",            type: "date"   },
-              ].map(({ key, label, type }) => (
-                <div key={key}>
-                  <label className="text-xs mb-1 block" style={{ color: "rgba(255,255,255,0.4)" }}>{label}</label>
-                  <input type={type} value={form[key]} required={label.includes("*")}
-                         onChange={e => setForm({ ...form, [key]: e.target.value })}
-                         className="admin-input" />
-                </div>
-              ))}
-              <div>
-                <label className="text-xs mb-1 block" style={{ color: "rgba(255,255,255,0.4)" }}>Payment Method</label>
-                <select value={form.payment_method}
-                        onChange={e => setForm({ ...form, payment_method: e.target.value })}
-                        className="admin-input">
-                  {PAY_METHODS.map(({ value, label }) => (
-                    <option key={value} value={value}>{label}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs mb-1 block" style={{ color: "rgba(255,255,255,0.4)" }}>Payment Status</label>
-                <select value={form.payment_status}
-                        onChange={e => setForm({ ...form, payment_status: e.target.value })}
-                        className="admin-input">
-                  {["pending","partial","paid","cancelled"].map(s => (
-                    <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs mb-1 block" style={{ color: "rgba(255,255,255,0.4)" }}>Notes</label>
-                <textarea value={form.notes} rows={3}
-                          onChange={e => setForm({ ...form, notes: e.target.value })}
-                          className="admin-input resize-none" />
-              </div>
-              {saveErr && <p className="text-red-400 text-sm bg-red-500/10 px-3 py-2 rounded-lg">{saveErr}</p>}
-              <div className="flex gap-3 pt-1">
-                <button type="submit" disabled={saving}
-                        className="flex-1 py-3 rounded-xl gradient-btn font-semibold text-sm disabled:opacity-60 flex items-center justify-center gap-2">
-                  {saving ? <><span className="spinner" /> Saving…</> : editTxn ? "Update" : "Add"}
-                </button>
-                <button type="button" onClick={closeForm}
-                        className="flex-1 py-3 rounded-xl text-sm"
-                        style={{ border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}>
-                  Cancel
-                </button>
-              </div>
-            </form>
+        <Modal>
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="font-display text-2xl font-normal text-ink">{editTxn ? "Edit Transaction" : "New Transaction"}</h3>
+            <button type="button" onClick={closeForm} aria-label="Close"
+                    className={`p-1.5 rounded-full text-mute hover:text-ink hover:bg-sand ${FOCUS}`}>
+              <X size={18} aria-hidden="true" />
+            </button>
           </div>
-        </div>
+          <form onSubmit={handleSave} className="space-y-3">
+            {[
+              { key: "client_name",  label: "Client Name *",      type: "text"   },
+              { key: "client_email", label: "Email",               type: "email"  },
+              { key: "client_phone", label: "Phone / WhatsApp",    type: "tel"    },
+              { key: "service_type", label: "Service Type",        type: "text"   },
+              { key: "package_name", label: "Package",             type: "text"   },
+              { key: "amount",       label: "Amount (₹) *",        type: "number" },
+              { key: "project_url",  label: "Project URL",         type: "url"    },
+              { key: "deadline",     label: "Deadline",            type: "date"   },
+            ].map(({ key, label, type }) => (
+              <div key={key}>
+                <label htmlFor={`txn-${key}`} className="field-label">{label}</label>
+                <input id={`txn-${key}`} type={type} value={form[key]} required={label.includes("*")}
+                       onChange={e => setForm({ ...form, [key]: e.target.value })}
+                       className="admin-input" />
+              </div>
+            ))}
+            <div>
+              <label htmlFor="txn-payment_method" className="field-label">Payment Method</label>
+              <select id="txn-payment_method" value={form.payment_method}
+                      onChange={e => setForm({ ...form, payment_method: e.target.value })}
+                      className="admin-input">
+                {PAY_METHODS.map(({ value, label }) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="txn-payment_status" className="field-label">Payment Status</label>
+              <select id="txn-payment_status" value={form.payment_status}
+                      onChange={e => setForm({ ...form, payment_status: e.target.value })}
+                      className="admin-input">
+                {["pending","partial","paid","cancelled"].map(s => (
+                  <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="txn-notes" className="field-label">Notes</label>
+              <textarea id="txn-notes" value={form.notes} rows={3}
+                        onChange={e => setForm({ ...form, notes: e.target.value })}
+                        className="admin-input resize-none" />
+            </div>
+            {saveErr && <p className="text-bad text-sm bg-sand px-3 py-2 rounded-lg" role="alert">{saveErr}</p>}
+            <div className="flex gap-3 pt-1">
+              <button type="submit" disabled={saving}
+                      className={`btn btn-primary flex-1 disabled:opacity-60 flex items-center justify-center gap-2 ${FOCUS}`}>
+                {saving ? <><span className="spinner" /> Saving…</> : editTxn ? "Update" : "Add"}
+              </button>
+              <button type="button" onClick={closeForm}
+                      className={`btn btn-ghost flex-1 ${FOCUS}`}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        </Modal>
       )}
 
       {/* Table */}
       {loading ? (
-        <div className="text-center py-20 flex flex-col items-center gap-3">
-          <span className="spinner" />
-          <span style={{ color: "rgba(255,255,255,0.3)" }}>Loading…</span>
-        </div>
+        <LoadingState />
       ) : txns.length === 0 ? (
-        <div className="text-center py-20" style={{ color: "rgba(255,255,255,0.3)" }}>
-          No transactions found for this filter.
-        </div>
+        <EmptyState icon={Receipt} text="No transactions found for this filter." />
       ) : (
-        <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
-          <table className="admin-table min-w-[700px]">
+        <div className="card overflow-x-auto">
+          <table className="admin-table min-w-[700px] w-full">
             <thead>
               <tr>
                 <th>Invoice</th><th>Client</th><th>Package</th>
@@ -571,31 +551,31 @@ function TransactionsTab() {
             <tbody>
               {txns.map(t => (
                 <tr key={t.id}>
-                  <td className="font-mono text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
+                  <td className="font-mono text-xs text-mute">
                     {t.invoice_number}
                   </td>
                   <td>
-                    <p className="font-medium text-white text-sm">{t.client_name}</p>
-                    <p className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>{t.client_email}</p>
+                    <p className="font-medium text-ink text-sm">{t.client_name}</p>
+                    <p className="text-xs text-mute">{t.client_email}</p>
                   </td>
-                  <td className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>{t.package_name}</td>
-                  <td className="font-bold text-white text-sm">₹{fmt(t.amount)}</td>
-                  <td className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>{t.payment_method || "—"}</td>
+                  <td className="text-sm text-ink-2">{t.package_name}</td>
+                  <td className="font-semibold text-ink text-sm">₹{fmt(t.amount)}</td>
+                  <td className="text-xs text-ink-2">{t.payment_method || "—"}</td>
                   <td><StatusBadge s={t.payment_status} /></td>
-                  <td className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
+                  <td className="text-xs text-mute">
                     {new Date(t.created_at).toLocaleDateString("en-IN")}
                   </td>
                   <td>
                     <div className="flex gap-1.5">
                       <button onClick={() => openEdit(t)}
-                              className="text-xs px-2.5 py-1 rounded-lg"
-                              style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.6)" }}>
-                        Edit
+                              aria-label={`Edit transaction for ${t.client_name}`}
+                              className={`btn btn-ghost btn-sm inline-flex items-center gap-1 ${FOCUS}`}>
+                        <Pencil size={12} aria-hidden="true" /> Edit
                       </button>
                       <button onClick={() => handleDelete(t.id)}
-                              className="text-xs px-2.5 py-1 rounded-lg"
-                              style={{ background: "rgba(239,68,68,0.1)", color: "#f87171" }}>
-                        Del
+                              aria-label={`Delete transaction for ${t.client_name}`}
+                              className={`btn btn-ghost btn-sm inline-flex items-center gap-1 text-bad ${FOCUS}`}>
+                        <Trash2 size={12} aria-hidden="true" /> Del
                       </button>
                     </div>
                   </td>
@@ -610,145 +590,223 @@ function TransactionsTab() {
 }
 
 /* ── Brands Tab ───────────────────────────────────────────────────────────── */
+const WORK_KEYS = ["category", "summary", "result", "tags", "image_url", "case_study"];
+const EMPTY_BRAND = {
+  name: "", logo_url: "", website_url: "", display_order: 0, active: true,
+  category: "", summary: "", result: "", tags: "", image_url: "", case_study: "", featured: false,
+};
+
 function BrandsTab() {
   const [brands,    setBrands]    = useState([]);
   const [loading,   setLoading]   = useState(true);
+  const [error,     setError]     = useState("");
   const [showForm,  setShowForm]  = useState(false);
   const [editBrand, setEditBrand] = useState(null);
-  const [form,      setForm]      = useState({ name:"", logo_url:"", website_url:"", display_order:0, active:true });
+  const [form,      setForm]      = useState(EMPTY_BRAND);
+  const [saving,    setSaving]    = useState(false);
+  const [saveErr,   setSaveErr]   = useState("");
 
-  const loadBrands = async () => {
-    setLoading(true);
-    const res  = await adminFetch("/api/admin/brands");
-    const data = await res.json();
-    setBrands(Array.isArray(data) ? data : []);
+  const loadBrands = useCallback(async () => {
+    setLoading(true); setError("");
+    const r = await api("/api/admin/brands");
+    if (r.ok) setBrands(Array.isArray(r.data) ? r.data : []);
+    else setError(r.error);
     setLoading(false);
-  };
-  useEffect(() => { loadBrands(); }, []);
+  }, []);
+  useEffect(() => { loadBrands(); }, [loadBrands]);
 
-  const closeForm = () => { setShowForm(false); setEditBrand(null); };
+  const closeForm = () => { setShowForm(false); setEditBrand(null); setSaveErr(""); };
+
+  const openNew = () => {
+    setEditBrand(null); setSaveErr("");
+    setForm({ ...EMPTY_BRAND, display_order: brands.length });
+    setShowForm(true);
+  };
+
+  const openEdit = (brand) => {
+    setEditBrand(brand); setSaveErr("");
+    setForm({
+      name: brand.name || "", logo_url: brand.logo_url || "", website_url: brand.website_url || "",
+      display_order: brand.display_order ?? 0, active: brand.active !== false,
+      category: brand.category || "", summary: brand.summary || "", result: brand.result || "",
+      tags: brand.tags || "", image_url: brand.image_url || "", case_study: brand.case_study || "",
+      featured: !!brand.featured,
+    });
+    setShowForm(true);
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
-    const method = editBrand ? "PATCH" : "POST";
-    const body   = editBrand ? { ...form, id: editBrand.id } : form;
-    await adminFetch("/api/admin/brands", { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (saving) return;
+    setSaving(true); setSaveErr("");
+    const body = { ...form, display_order: Number(form.display_order) || 0 };
+    // Before the migration is run, old rows have no work-page columns: only send
+    // them if the row has them already or the owner actually filled them in.
+    for (const k of [...WORK_KEYS, "featured"]) {
+      const filled = k === "featured" ? form.featured === true : String(form[k] || "").trim() !== "";
+      if (editBrand ? !(k in editBrand) && !filled : !filled) delete body[k];
+    }
+    const r = await api("/api/admin/brands", {
+      method: editBrand ? "PATCH" : "POST",
+      body: editBrand ? { ...body, id: editBrand.id } : body,
+    });
+    setSaving(false);
+    if (!r.ok) { setSaveErr(r.error); return; }
     closeForm(); loadBrands();
   };
 
   const handleToggle = async brand => {
-    await adminFetch("/api/admin/brands", {
-      method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: brand.id, active: !brand.active }),
-    });
-    loadBrands();
+    const r = await api("/api/admin/brands", { method: "PATCH", body: { id: brand.id, active: !brand.active } });
+    if (!r.ok) setError(r.error); else loadBrands();
   };
 
   const handleDelete = async id => {
     if (!confirm("Delete this brand?")) return;
-    await adminFetch("/api/admin/brands", {
-      method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }),
-    });
-    loadBrands();
+    const r = await api("/api/admin/brands", { method: "DELETE", body: { id } });
+    if (!r.ok) setError(r.error); else loadBrands();
   };
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <p className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>{brands.length} brands</p>
-        <button onClick={() => { setEditBrand(null); setForm({ name:"", logo_url:"", website_url:"", display_order: brands.length, active:true }); setShowForm(true); }}
-                className="px-4 py-2 rounded-xl gradient-btn font-semibold text-xs">
-          + Add Brand
+        <p className="text-sm text-mute">{brands.length} brands</p>
+        <button onClick={openNew}
+                className={`btn btn-primary btn-sm inline-flex items-center gap-1.5 ${FOCUS}`}>
+          <Plus size={14} aria-hidden="true" /> Add Brand
         </button>
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-     style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}>
-          <div className="w-full max-w-md rounded-2xl border p-6"
-               style={{ background: "#13131f", borderColor: "rgba(255,255,255,0.1)" }}
-               onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="font-bold text-white">{editBrand ? "Edit Brand" : "Add Brand"}</h3>
-              <button type="button" onClick={closeForm} style={{ color: "rgba(255,255,255,0.4)" }}>✕</button>
+        <Modal onClose={closeForm} label={editBrand ? "Edit brand" : "Add brand"}>
+          <ModalHeader title={editBrand ? "Edit Brand" : "Add Brand"} onClose={closeForm} />
+          <form onSubmit={handleSave} className="space-y-3">
+            {[
+              { key: "name",          label: "Brand Name *"             },
+              { key: "logo_url",      label: "Logo URL *"               },
+              { key: "website_url",   label: "Website URL *"            },
+              { key: "display_order", label: "Display Order", type:"number" },
+            ].map(({ key, label, type="text" }) => (
+              <div key={key}>
+                <label htmlFor={`brand-${key}`} className="field-label">{label}</label>
+                <input id={`brand-${key}`} type={type} value={form[key]} required={label.includes("*")}
+                       onChange={e => setForm({ ...form, [key]: e.target.value })}
+                       className="admin-input" />
+              </div>
+            ))}
+            {form.logo_url && (
+              <div className="panel p-3">
+                <p className="text-xs mb-2 text-mute">Preview</p>
+                <img src={form.logo_url} alt="preview" className="h-10 object-contain"
+                     onError={e => e.target.style.display = "none"} />
+              </div>
+            )}
+            <div className="flex items-center gap-3">
+              <span id="brand-active-label" className="text-sm text-ink-2">Active</span>
+              <button type="button" onClick={() => setForm({ ...form, active: !form.active })}
+                      role="switch" aria-checked={form.active} aria-labelledby="brand-active-label"
+                      className={`w-11 h-6 rounded-full relative transition-colors ${form.active ? "bg-ink" : "bg-line-2"} ${FOCUS}`}>
+                <span className="absolute top-1 w-4 h-4 rounded-full bg-paper transition-all"
+                      style={{ left: form.active ? "calc(100% - 20px)" : "4px" }} />
+              </button>
             </div>
-            <form onSubmit={handleSave} className="space-y-3">
-              {[
-                { key: "name",          label: "Brand Name *"             },
-                { key: "logo_url",      label: "Logo URL *"               },
-                { key: "website_url",   label: "Website URL *"            },
-                { key: "display_order", label: "Display Order", type:"number" },
-              ].map(({ key, label, type="text" }) => (
-                <div key={key}>
-                  <label className="text-xs mb-1 block" style={{ color: "rgba(255,255,255,0.4)" }}>{label}</label>
-                  <input type={type} value={form[key]} required={label.includes("*")}
-                         onChange={e => setForm({ ...form, [key]: type === "number" ? Number(e.target.value) : e.target.value })}
-                         className="admin-input" />
-                </div>
-              ))}
-              {form.logo_url && (
-                <div className="p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                  <p className="text-xs mb-2" style={{ color: "rgba(255,255,255,0.3)" }}>Preview</p>
-                  <img src={form.logo_url} alt="preview" className="h-10 object-contain"
-                       onError={e => e.target.style.display = "none"} />
-                </div>
-              )}
+
+            <fieldset className="panel p-4 space-y-3 mt-2">
+              <legend className="eyebrow px-1">Work page details (optional)</legend>
+              <p className="text-xs text-mute">A project gets its own case-study page once it has a summary.</p>
+              <div>
+                <label htmlFor="brand-category" className="field-label">Category</label>
+                <input id="brand-category" className="admin-input" maxLength={120} placeholder="e.g. E-commerce"
+                       value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} />
+              </div>
+              <div>
+                <label htmlFor="brand-summary" className="field-label">One-line summary</label>
+                <input id="brand-summary" className="admin-input" maxLength={500}
+                       value={form.summary} onChange={e => setForm({ ...form, summary: e.target.value })} />
+              </div>
+              <div>
+                <label htmlFor="brand-result" className="field-label">Result / outcome</label>
+                <input id="brand-result" className="admin-input" maxLength={500}
+                       value={form.result} onChange={e => setForm({ ...form, result: e.target.value })} />
+              </div>
+              <div>
+                <label htmlFor="brand-tags" className="field-label">Tags (comma separated)</label>
+                <input id="brand-tags" className="admin-input" maxLength={300} placeholder="Next.js, Supabase"
+                       value={form.tags} onChange={e => setForm({ ...form, tags: e.target.value })} />
+              </div>
+              <div>
+                <label htmlFor="brand-image_url" className="field-label">Screenshot image URL</label>
+                <input id="brand-image_url" className="admin-input" maxLength={1000}
+                       value={form.image_url} onChange={e => setForm({ ...form, image_url: e.target.value })} />
+              </div>
+              <div>
+                <label htmlFor="brand-case_study" className="field-label">Case study (paragraphs separated by a blank line)</label>
+                <textarea id="brand-case_study" rows={6} maxLength={20000} className="admin-input"
+                          value={form.case_study} onChange={e => setForm({ ...form, case_study: e.target.value })} />
+              </div>
               <div className="flex items-center gap-3">
-                <label className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>Active</label>
-                <button type="button" onClick={() => setForm({ ...form, active: !form.active })}
-                        className="w-11 h-6 rounded-full relative transition-colors"
-                        style={{ background: form.active ? "#d4af37" : "rgba(255,255,255,0.1)" }}>
-                  <span className="absolute top-1 w-4 h-4 rounded-full bg-white transition-all"
-                        style={{ left: form.active ? "calc(100% - 20px)" : "4px" }} />
+                <span id="brand-featured-label" className="text-sm text-ink-2">Featured</span>
+                <button type="button" onClick={() => setForm({ ...form, featured: !form.featured })}
+                        role="switch" aria-checked={form.featured} aria-labelledby="brand-featured-label"
+                        className={`w-11 h-6 rounded-full relative transition-colors ${form.featured ? "bg-ink" : "bg-line-2"} ${FOCUS}`}>
+                  <span className="absolute top-1 w-4 h-4 rounded-full bg-paper transition-all"
+                        style={{ left: form.featured ? "calc(100% - 20px)" : "4px" }} />
                 </button>
               </div>
-              <div className="flex gap-3 pt-1">
-                <button type="submit" className="flex-1 py-3 rounded-xl gradient-btn font-semibold text-sm">Save</button>
-                <button type="button" onClick={closeForm} className="flex-1 py-3 rounded-xl text-sm"
-                        style={{ border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}>
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            </fieldset>
+
+            {saveErr && <p className="text-bad text-sm bg-sand px-3 py-2 rounded-lg" role="alert">{saveErr}</p>}
+            <div className="flex gap-3 pt-1">
+              <button type="submit" disabled={saving}
+                      className={`btn btn-primary flex-1 disabled:opacity-60 flex items-center justify-center gap-2 ${FOCUS}`}>
+                {saving ? <><span className="spinner" /> Saving…</> : "Save"}
+              </button>
+              <button type="button" onClick={closeForm} className={`btn btn-ghost flex-1 ${FOCUS}`}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        </Modal>
       )}
 
+      {error && !loading && brands.length > 0 && <p className="text-bad text-sm mb-4" role="alert">{error}</p>}
+
       {loading ? (
-        <div className="text-center py-20 flex flex-col items-center gap-3">
-          <span className="spinner" /><span style={{ color: "rgba(255,255,255,0.3)" }}>Loading…</span>
-        </div>
+        <LoadingState />
+      ) : error && brands.length === 0 ? (
+        <ErrorState title="Could not load brands" error={error} onRetry={loadBrands} />
+      ) : brands.length === 0 ? (
+        <EmptyState icon={Tag} text="No brands yet." />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {brands.map(brand => (
-            <div key={brand.id} className="rounded-2xl border p-5 transition-opacity"
-                 style={{ background: "rgba(255,255,255,0.025)", borderColor: "rgba(255,255,255,0.08)", opacity: brand.active ? 1 : 0.45 }}>
-              <div className="flex items-start justify-between mb-3">
+            <div key={brand.id} className="card p-5 transition-opacity"
+                 style={{ opacity: brand.active ? 1 : 0.6 }}>
+              <div className="flex items-start justify-between mb-3 gap-2">
                 <img src={brand.logo_url} alt={brand.name} className="h-12 object-contain"
                      onError={e => e.target.style.display = "none"} />
                 <button onClick={() => handleToggle(brand)}
-                        className="text-xs px-2 py-1 rounded-lg"
-                        style={brand.active
-                          ? { background: "rgba(16,185,129,0.15)", color: "#34d399" }
-                          : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.4)" }}>
+                        aria-label={`${brand.active ? "Hide" : "Show"} ${brand.name}`}
+                        className={`badge ${brand.active ? "badge-paid" : "badge-cancelled"} ${FOCUS}`}>
                   {brand.active ? "Live" : "Hidden"}
                 </button>
               </div>
-              <p className="font-semibold text-white text-sm mb-1">{brand.name}</p>
+              <p className="font-semibold text-ink text-sm mb-1 flex flex-wrap items-center gap-2">
+                {brand.name}
+                {brand.summary && <span className="badge badge-partial">Case study</span>}
+              </p>
               <a href={brand.website_url} target="_blank" rel="noopener noreferrer"
-                 className="text-xs truncate block mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>
+                 className={`text-xs truncate block mb-4 text-mute hover:text-ink underline-offset-2 hover:underline rounded ${FOCUS}`}>
                 {brand.website_url}
               </a>
               <div className="flex gap-2">
-                <button onClick={() => { setEditBrand(brand); setForm({ name:brand.name, logo_url:brand.logo_url, website_url:brand.website_url, display_order:brand.display_order, active:brand.active }); setShowForm(true); }}
-                        className="flex-1 text-xs py-1.5 rounded-lg"
-                        style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.6)" }}>
-                  Edit
+                <button onClick={() => openEdit(brand)}
+                        className={`btn btn-ghost btn-sm flex-1 inline-flex items-center justify-center gap-1 ${FOCUS}`}>
+                  <Pencil size={12} aria-hidden="true" /> Edit
                 </button>
                 <button onClick={() => handleDelete(brand.id)}
-                        className="text-xs px-3 py-1.5 rounded-lg"
-                        style={{ background: "rgba(239,68,68,0.1)", color: "#f87171" }}>
-                  Delete
+                        aria-label={`Delete ${brand.name}`}
+                        className={`btn btn-ghost btn-sm inline-flex items-center justify-center gap-1 text-bad ${FOCUS}`}>
+                  <Trash2 size={12} aria-hidden="true" /> Delete
                 </button>
               </div>
             </div>
@@ -760,91 +818,149 @@ function BrandsTab() {
 }
 
 /* ── Messages Tab ─────────────────────────────────────────────────────────── */
+const SERVICE_PREFIX = /^\[Service:\s*([^\]]+)\]\s*/;
+
+function splitService(m) {
+  if (m.service) return { service: m.service, body: m.message };
+  const hit = SERVICE_PREFIX.exec(m.message || "");
+  return hit ? { service: hit[1].trim(), body: m.message.replace(SERVICE_PREFIX, "") } : { service: "", body: m.message };
+}
+
+function MessageCard({ m, onChanged, onError }) {
+  const { service, body } = splitService(m);
+  const [notes,  setNotes]  = useState(m.notes || "");
+  const [saving, setSaving] = useState(false);
+  const [saved,  setSaved]  = useState(false);
+  const [busy,   setBusy]   = useState(false);
+  const dirty = notes !== (m.notes || "");
+
+  const patch = async (payload) => {
+    const r = await api("/api/admin/messages", { method: "PATCH", body: { id: m.id, ...payload } });
+    if (!r.ok) onError(r.error);
+    return r.ok;
+  };
+
+  const markStatus = async (status) => {
+    setBusy(true);
+    if (await patch({ status })) onChanged();
+    setBusy(false);
+  };
+
+  const saveNotes = async () => {
+    setSaving(true); setSaved(false);
+    if (await patch({ notes })) { setSaved(true); onChanged(); }
+    setSaving(false);
+  };
+
+  const remove = async () => {
+    if (!confirm(`Delete the message from ${m.name}? This cannot be undone.`)) return;
+    setBusy(true);
+    const r = await api("/api/admin/messages", { method: "DELETE", body: { id: m.id } });
+    if (!r.ok) { onError(r.error); setBusy(false); return; }
+    onChanged();
+  };
+
+  return (
+    <div className={`card p-5 ${m.status === "unread" ? "border-gold" : ""}`}
+         style={m.status === "unread" ? { borderColor: "#b68a2e" } : undefined}>
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+        <div>
+          <p className="font-semibold text-ink text-sm">{m.name}</p>
+          <div className="flex flex-wrap gap-3 text-xs mt-0.5 text-mute">
+            {m.email && <a href={`mailto:${m.email}`} className={`hover:text-ink underline-offset-2 hover:underline rounded ${FOCUS}`}>{m.email}</a>}
+            {m.phone && <a href={`tel:${m.phone}`} className="hover:text-ink">{m.phone}</a>}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <StatusBadge s={m.status === "unread" ? "pending" : m.status === "replied" ? "paid" : "partial"} />
+          <span className="text-xs text-mute">
+            {new Date(m.created_at).toLocaleDateString("en-IN")}
+          </span>
+        </div>
+      </div>
+      {service && (
+        <p className="mb-2"><span className="badge badge-partial">Service: {service}</span></p>
+      )}
+      <p className="text-sm leading-relaxed mb-4 text-ink-2 whitespace-pre-wrap break-words">{body}</p>
+
+      <div className="mb-4">
+        <label htmlFor={`note-${m.id}`} className="field-label">Private notes</label>
+        <textarea id={`note-${m.id}`} rows={2} maxLength={2000} className="admin-input resize-none"
+                  placeholder="Only you can see this" value={notes}
+                  onChange={e => { setNotes(e.target.value); setSaved(false); }} />
+        {(dirty || saved) && (
+          <button onClick={saveNotes} disabled={saving || !dirty}
+                  className={`btn btn-ghost btn-sm mt-2 inline-flex items-center gap-1.5 disabled:opacity-60 ${FOCUS}`}>
+            {saving ? <><span className="spinner" /> Saving…</> : saved && !dirty ? <><Check size={13} aria-hidden="true" /> Saved</> : "Save notes"}
+          </button>
+        )}
+      </div>
+
+      <div className="flex gap-2 flex-wrap">
+        <a href={m.email ? `mailto:${m.email}` : `tel:${m.phone}`}
+           className={`btn btn-primary btn-sm inline-flex items-center gap-1.5 ${FOCUS}`}>
+          <Reply size={13} aria-hidden="true" /> Reply
+        </a>
+        {m.status !== "read" && (
+          <button onClick={() => markStatus("read")} disabled={busy}
+                  className={`btn btn-ghost btn-sm ${FOCUS}`}>
+            Mark Read
+          </button>
+        )}
+        {m.status !== "replied" && (
+          <button onClick={() => markStatus("replied")} disabled={busy}
+                  className={`btn btn-ghost btn-sm inline-flex items-center gap-1.5 ${FOCUS}`}>
+            <Check size={13} aria-hidden="true" /> Mark Replied
+          </button>
+        )}
+        <button onClick={remove} disabled={busy} aria-label={`Delete message from ${m.name}`}
+                className={`btn btn-ghost btn-sm ml-auto inline-flex items-center gap-1.5 text-bad ${FOCUS}`}>
+          <Trash2 size={12} aria-hidden="true" /> Delete
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function MessagesTab() {
   const [messages, setMessages] = useState([]);
   const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState("");
 
-  const loadMessages = async () => {
-    setLoading(true);
-    const res  = await adminFetch("/api/admin/messages");
-    const data = await res.json();
-    setMessages(Array.isArray(data) ? data : []);
+  const loadMessages = useCallback(async (quiet = false) => {
+    if (!quiet) setLoading(true);
+    const r = await api("/api/admin/messages");
+    if (r.ok) { setMessages(Array.isArray(r.data) ? r.data : []); setError(""); }
+    else setError(r.error);
     setLoading(false);
-  };
-  useEffect(() => { loadMessages(); }, []);
-
-  const markStatus = async (id, status) => {
-    await adminFetch("/api/admin/messages", {
-      method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, status }),
-    });
-    loadMessages();
-  };
+  }, []);
+  useEffect(() => { loadMessages(); }, [loadMessages]);
 
   const unread = messages.filter(m => m.status === "unread").length;
 
   return (
     <div>
       <div className="flex items-center gap-3 mb-6">
-        <p className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>{messages.length} messages</p>
+        <p className="text-sm text-mute">{messages.length} messages</p>
         {unread > 0 && (
-          <span className="px-2 py-0.5 rounded-full text-xs font-semibold"
-                style={{ background: "rgba(212,175,55,0.25)", color: "#d4af37" }}>
+          <span className="badge badge-pending">
             {unread} unread
           </span>
         )}
       </div>
 
+      {error && !loading && messages.length > 0 && <p className="text-bad text-sm mb-4" role="alert">{error}</p>}
+
       {loading ? (
-        <div className="text-center py-20 flex flex-col items-center gap-3">
-          <span className="spinner" /><span style={{ color: "rgba(255,255,255,0.3)" }}>Loading…</span>
-        </div>
+        <LoadingState />
+      ) : error && messages.length === 0 ? (
+        <ErrorState title="Could not load messages" error={error} onRetry={() => loadMessages()} />
       ) : messages.length === 0 ? (
-        <div className="text-center py-20" style={{ color: "rgba(255,255,255,0.3)" }}>No messages yet</div>
+        <EmptyState icon={Inbox} text="No messages yet" />
       ) : (
         <div className="space-y-3">
           {messages.map(m => (
-            <div key={m.id} className="rounded-2xl border p-5"
-                 style={{
-                   background: m.status === "unread" ? "rgba(212,175,55,0.04)" : "rgba(255,255,255,0.025)",
-                   borderColor: m.status === "unread" ? "rgba(212,175,55,0.25)" : "rgba(255,255,255,0.08)",
-                 }}>
-              <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
-                <div>
-                  <p className="font-semibold text-white text-sm">{m.name}</p>
-                  <div className="flex gap-3 text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
-                    <a href={`mailto:${m.email}`} className="hover:text-[#d4af37] transition-colors">{m.email}</a>
-                    {m.phone && <span>{m.phone}</span>}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <StatusBadge s={m.status === "unread" ? "pending" : m.status === "replied" ? "paid" : "partial"} />
-                  <span className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
-                    {new Date(m.created_at).toLocaleDateString("en-IN")}
-                  </span>
-                </div>
-              </div>
-              <p className="text-sm leading-relaxed mb-4" style={{ color: "rgba(255,255,255,0.6)" }}>{m.message}</p>
-              <div className="flex gap-2 flex-wrap">
-                <a href={`mailto:${m.email}`}
-                   className="text-xs px-3 py-1.5 rounded-lg gradient-btn font-medium text-white">
-                  Reply →
-                </a>
-                {m.status !== "read" && (
-                  <button onClick={() => markStatus(m.id, "read")}
-                          className="text-xs px-3 py-1.5 rounded-lg"
-                          style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.6)" }}>
-                    Mark Read
-                  </button>
-                )}
-                {m.status !== "replied" && (
-                  <button onClick={() => markStatus(m.id, "replied")}
-                          className="text-xs px-3 py-1.5 rounded-lg"
-                          style={{ background: "rgba(16,185,129,0.1)", color: "#34d399" }}>
-                    Mark Replied
-                  </button>
-                )}
-              </div>
-            </div>
+            <MessageCard key={m.id} m={m} onChanged={() => loadMessages(true)} onError={setError} />
           ))}
         </div>
       )}
@@ -857,6 +973,9 @@ export default function AdminPanel() {
   const [authed,   setAuthed]   = useState(false);
   const [checking, setChecking] = useState(true);
   const [tab,      setTab]      = useState("transactions");
+
+  // Mark this browser as the owner's so own visits are never counted.
+  useEffect(() => { try { localStorage.setItem("dws_owner", "1"); } catch {} }, []);
 
   useEffect(() => {
   fetch("/api/admin/session")
@@ -877,7 +996,7 @@ export default function AdminPanel() {
   };
 
   if (checking) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "#0b0b12" }}>
+    <div className="min-h-screen flex items-center justify-center bg-bg text-ink">
       <div className="spinner" />
     </div>
   );
@@ -885,59 +1004,67 @@ export default function AdminPanel() {
   if (!authed) return <LoginScreen onLogin={() => setAuthed(true)} />;
 
   const TABS = [
-    { id: "transactions", label: "💰 Transactions" },
-    { id: "brands",       label: "🏷️ Brands"       },
-    { id: "messages",     label: "📬 Messages"      },
-    { id: "visitors",     label: "📊 Visitors"      },
+    { id: "transactions", label: "Transactions", Icon: Receipt  },
+    { id: "brands",       label: "Brands",       Icon: Tag      },
+    { id: "packages",     label: "Packages",     Icon: Package  },
+    { id: "testimonials", label: "Testimonials", Icon: Quote    },
+    { id: "messages",     label: "Messages",     Icon: Mail     },
+    { id: "onboarding",   label: "Onboarding",   Icon: Link2    },
+    { id: "documents",    label: "Documents",    Icon: FileText },
+    { id: "visitors",     label: "Visitors",     Icon: BarChart3 },
   ];
 
   return (
-    <div className="min-h-screen" style={{ background: "#0b0b12" }}>
+    <div className="min-h-screen bg-bg text-ink">
       {/* Top bar */}
-      <div className="sticky top-0 z-40 backdrop-blur-xl border-b px-4 sm:px-5 py-3.5"
-           style={{ background: "rgba(11,11,18,0.92)", borderColor: "rgba(255,255,255,0.07)" }}>
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <img src="/dws-logo.png" alt="DWS" className="h-8 w-auto object-contain" />
-            <div>
-              <p className="font-semibold text-white text-sm leading-none">Admin Panel</p>
-              <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>Dharma Web Services</p>
-            </div>
+      <header className="sticky top-0 z-40 border-b border-line bg-paper px-4 sm:px-6 py-3">
+        <div className="max-w-[1200px] mx-auto flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <img src="/dws-mark.png" alt="Dharma Web Services" className="h-8 w-auto object-contain" />
+            <span className="font-display text-2xl font-normal text-ink leading-none truncate">Dharma Vault</span>
           </div>
           <div className="flex items-center gap-2">
             <a href="/" target="_blank" rel="noopener noreferrer"
-               className="hidden sm:inline-flex text-xs px-3 py-1.5 rounded-lg border"
-               style={{ borderColor: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)" }}>
-              View Site →
+               className={`btn btn-ghost btn-sm max-sm:!hidden items-center gap-1.5 ${FOCUS}`}>
+              View Site <ExternalLink size={12} aria-hidden="true" />
             </a>
             <button onClick={handleLogout}
-                    className="text-xs px-3 py-1.5 rounded-lg"
-                    style={{ background: "rgba(239,68,68,0.1)", color: "#f87171" }}>
-              Logout
+                    className={`btn btn-ghost btn-sm inline-flex items-center gap-1.5 ${FOCUS}`}>
+              <LogOut size={13} aria-hidden="true" /> Logout
             </button>
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-5 py-6 sm:py-8">
+      <main className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Tabs */}
-        <div className="flex gap-2 mb-7 overflow-x-auto pb-1">
-          {TABS.map(({ id, label }) => (
-            <button key={id} onClick={() => setTab(id)}
-                    className="px-4 sm:px-5 py-2.5 rounded-xl font-medium text-sm whitespace-nowrap transition-all"
-                    style={tab === id
-                      ? { background: "linear-gradient(135deg,#d4af37,#a07828)", color: "#000" }
-                      : { background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.07)" }}>
-              {label}
-            </button>
-          ))}
-        </div>
+        <nav aria-label="Sections" className="flex flex-wrap gap-x-1 mb-7 border-b border-line">
+          {TABS.map(({ id, label, Icon }) => {
+            const active = tab === id;
+            return (
+              <button key={id} onClick={() => setTab(id)}
+                      aria-current={active ? "page" : undefined}
+                      className={`relative inline-flex items-center gap-2 px-3 sm:px-4 py-3 text-sm whitespace-nowrap transition-colors ${active ? "text-ink font-medium" : "text-mute hover:text-ink"} ${FOCUS}`}>
+                <Icon size={15} aria-hidden="true" />
+                {label}
+                {active && (
+                  <span className="absolute left-3 right-3 sm:left-4 sm:right-4 -bottom-px h-0.5 rounded-full"
+                        style={{ background: "#b68a2e" }} />
+                )}
+              </button>
+            );
+          })}
+        </nav>
 
         {tab === "transactions" && <TransactionsTab />}
         {tab === "brands"       && <BrandsTab />}
+        {tab === "packages"     && <PackagesTab />}
+        {tab === "testimonials" && <TestimonialsTab />}
         {tab === "messages"     && <MessagesTab />}
+        {tab === "onboarding"   && <OnboardingTab />}
+        {tab === "documents"    && <DocumentsTab />}
         {tab === "visitors"     && <VisitorsTab />}
-      </div>
+      </main>
     </div>
   );
 }

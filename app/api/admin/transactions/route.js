@@ -10,7 +10,6 @@ async function auth() {
 
 export async function GET(req) {
   try {
-    console.log("GET /transactions called");
 
     const supabase = await auth();
 
