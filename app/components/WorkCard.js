@@ -7,7 +7,8 @@ export default function WorkCard({ w, priority = false, sizes = "(min-width:1024
   const internal = w.hasCase;
   const href = internal ? `/work/${w.slug}` : w.url || "#";
   const Wrapper = internal ? Link : "a";
-  const extra = internal ? {} : { target: "_blank", rel: "noopener noreferrer" };
+  // Case-study pages load when clicked, not in the background while the home page is still loading.
+  const extra = internal ? { prefetch: false } : { target: "_blank", rel: "noopener noreferrer" };
 
   return (
     <Wrapper

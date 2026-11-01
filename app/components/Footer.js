@@ -24,7 +24,7 @@ function Col({ title, items, span = "lg:col-span-2" }) {
       <ul className="mt-4 space-y-1">
         {items.map(({ label, href }) => (
           <li key={href}>
-            <Link href={href} className="link-underline inline-block py-2 text-[0.92rem] text-[#faf7f0]/80 transition-colors hover:text-white">
+            <Link href={href} prefetch={false} className="link-underline inline-block py-2 text-[0.92rem] text-[#faf7f0]/80 transition-colors hover:text-white">
               {label}
             </Link>
           </li>

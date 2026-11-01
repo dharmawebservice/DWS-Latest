@@ -16,9 +16,9 @@ import CtaBand from "../components/CtaBand";
 export const revalidate = 300;
 
 export const metadata = pageMeta({
-  title: "Dharma Web Services | Premium Website Development in Bangalore",
+  title: "Dharma Web Services | Premium Website Development in Hyderabad",
   description:
-    "Fast, premium websites, online stores and web apps for growing businesses. Packages from ₹2,499, delivered in 7–14 days, built in Bangalore for clients worldwide.",
+    "Fast, premium websites, online stores and web apps for growing businesses. Packages from ₹2,499, delivered in 7–14 days, built in Hyderabad for clients worldwide.",
   path: "/",
   absoluteTitle: true,
 });
@@ -47,7 +47,7 @@ export default async function Home() {
       <section className="hero-glow relative overflow-hidden">
         <div className="container-x relative z-10 grid items-center gap-14 pb-16 pt-12 sm:pb-24 sm:pt-20 lg:grid-cols-12 lg:gap-10">
           <div className="lg:col-span-7">
-            <p className="eyebrow">Web studio · Bangalore, India</p>
+            <p className="eyebrow">Web studio · Hyderabad, India</p>
             <h1 className="display-xl mt-6">
               Websites that <em>earn their keep.</em>
             </h1>
@@ -107,7 +107,7 @@ export default async function Home() {
           />
           <div className="mt-14 lg:ml-[248px]">
             {SERVICES.map((s, i) => (
-              <Link key={s.slug} href={`/services/${s.slug}`} className="row-link group">
+              <Link key={s.slug} href={`/services/${s.slug}`} prefetch={false} className="row-link group">
                 <span className="num-serif text-2xl text-gold-ink">0{i + 1}</span>
                 <h3 className="font-display text-[1.6rem] leading-tight sm:text-[1.9rem]">{s.title}</h3>
                 <p className="col-span-2 col-start-2 text-[0.95rem] text-ink-2 md:col-span-1 md:col-start-auto">{s.short}</p>
