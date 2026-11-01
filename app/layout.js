@@ -25,7 +25,7 @@ const DESCRIPTION =
 
 export const metadata = {
   metadataBase: new URL(SITE.url),
-  title: { default: "Dharma Web Services | Premium Website Development in Hyderabad", template: "%s | Dharma Web Services" },
+  title: { default: "Dharma Web Services | Premium Website Development in Bangalore", template: "%s | Dharma Web Services" },
   description: DESCRIPTION,
   applicationName: SITE.name,
   alternates: { canonical: "/" },

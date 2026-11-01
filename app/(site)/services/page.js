@@ -11,7 +11,7 @@ import CtaBand from "../../components/CtaBand";
 export const metadata = pageMeta({
   title: "Website, Web App & E-commerce Services",
   description:
-    "Business websites, custom web apps, online stores and SEO care — designed and built in Hyderabad by Dharma Web Services. Fast, mobile-first and fairly priced.",
+    "Business websites, custom web apps, online stores and SEO care — designed and built in Bangalore by Dharma Web Services. Fast, mobile-first and fairly priced.",
   path: "/services",
 });
 

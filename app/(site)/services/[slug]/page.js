@@ -21,7 +21,7 @@ export async function generateMetadata({ params }) {
   const s = SERVICES.find((x) => x.slug === slug);
   if (!s) return {};
   return pageMeta({
-    title: `${s.title} in Hyderabad`,
+    title: `${s.title} in Bangalore`,
     description: `${s.tagline} ${s.short}`.slice(0, 158),
     path: `/services/${s.slug}`,
   });

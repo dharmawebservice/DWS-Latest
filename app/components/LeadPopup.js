@@ -87,7 +87,7 @@ export default function LeadPopup() {
   return (
     <div className="popup-overlay" onMouseDown={(e) => e.target === e.currentTarget && close()}>
       <div id="lead-popup" role="dialog" aria-modal="true" aria-labelledby="lead-h" className="popup">
-        <button type="button" onClick={close} className="popup-x" aria-label="Close">×</button>
+        <button type="button" onClick={close} className="popup-x" aria-label="Close"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" /></svg></button>
 
         <div className="popup-side">
           <div>

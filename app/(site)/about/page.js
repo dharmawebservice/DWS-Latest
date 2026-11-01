@@ -11,7 +11,7 @@ import CtaBand from "../../components/CtaBand";
 export const metadata = pageMeta({
   title: "About Dharma Web Services",
   description:
-    "Dharma Web Services is a Hyderabad web studio building fast, premium websites and web apps for clients in India, the UK, UAE and US.",
+    "Dharma Web Services is a Bangalore web studio building fast, premium websites and web apps for clients in India, the UK, UAE and US.",
   path: "/about",
 });
 

@@ -334,14 +334,15 @@ em { font-style: normal; }
 .popup-main { padding: 1.6rem 1.5rem; }
 @media (min-width: 560px) { .popup-main { padding: 2.1rem 1.9rem; } .popup-side { padding: 2.1rem 1.6rem; } }
 .popup-x {
-  position: absolute; right: .55rem; top: .35rem; z-index: 2; width: 2.5rem; height: 2.5rem;
-  font-size: 1.9rem; line-height: 1; color: var(--color-ink-2); cursor: pointer;
+  position: absolute; right: .75rem; top: .75rem; z-index: 2; width: 2.5rem; height: 2.5rem;
+  display: grid; place-items: center; color: var(--color-ink); cursor: pointer;
+  background: var(--color-paper); border: 1px solid var(--color-line-2); border-radius: 50%;
+  transition: background .15s, color .15s, border-color .15s;
 }
-@media (max-width: 559px) { .popup-x { color: #faf7f0; } }
-.popup-x:hover { color: var(--color-gold-ink); }
-@keyframes fade { from { opacity: 0; } }
-@keyframes rise { from { opacity: 0; transform: translateY(14px); } }
-
+.popup-x svg { width: 1rem; height: 1rem; }
+.popup-x:hover { background: var(--color-ink); color: #faf7f0; border-color: var(--color-ink); }
+.popup-x:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 2px; }
+@media (min-width: 560px) { .popup-main { padding-top: 4.2rem; } }
 /* ── Mobile action bar ──────────────────────────────────────── */
 .sticky-bar { display: none; }
 @media (max-width: 767px) {

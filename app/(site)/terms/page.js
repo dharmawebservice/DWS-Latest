@@ -71,7 +71,7 @@ export default function Terms() {
         </p>
 
         <h2>9. Governing law</h2>
-        <p>These terms are governed by the laws of India. Any dispute will be subject to the courts at Hyderabad, Telangana.</p>
+        <p>These terms are governed by the laws of India. Any dispute will be subject to the courts at Bangalore, Telangana.</p>
 
         <h2>10. Contact</h2>
         <p>Questions about these terms? Email <a href={`mailto:${SITE.email}`}>{SITE.email}</a>.</p>
