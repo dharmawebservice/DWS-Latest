@@ -27,7 +27,9 @@ export default async function Home() {
   const [work, plans, testimonials] = await Promise.all([getWork(), getPackages(), getTestimonials()]);
 
   const withImage = work.filter((w) => w.image);
-  const featured = [...withImage.filter((w) => w.featured), ...withImage.filter((w) => !w.featured)].slice(0, 4);
+  // Cards skip projects flagged hideCard (Kaivalya). The hero below still finds it in withImage.
+  const cardWork = withImage.filter((w) => !w.hideCard);
+  const featured = [...cardWork.filter((w) => w.featured), ...cardWork.filter((w) => !w.featured)].slice(0, 4);
   // Project shown beside the headline. Change HERO_SLUG in lib/content.js to show another one.
   const heroShot = withImage.find((w) => w.slug === HERO_SLUG) || withImage[0];
   const logos = work.filter((w) => w.logo);

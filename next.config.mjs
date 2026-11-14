@@ -10,7 +10,9 @@ const nextConfig = {
   poweredByHeader: false,
   compress: true,
   images: {
-    formats: ["image/avif", "image/webp"],
+    qualities: [75, 95],
+    contentDispositionType: "inline",
+    formats: ["image/webp"],
     minimumCacheTTL: 60 * 60 * 24 * 30,
     remotePatterns: [{ protocol: "https", hostname: "**" }],
   },

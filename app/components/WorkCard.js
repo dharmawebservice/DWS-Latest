@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 
 // One project. Links to the case-study page when there is one, otherwise to the live site.
-export default function WorkCard({ w, priority = false, sizes = "(min-width:1024px) 380px, (min-width:640px) 50vw, 100vw" }) {
+export default function WorkCard({ w, priority = false, sizes = "(min-width:1280px) 760px, (min-width:640px) 50vw, 100vw" }) {
   const internal = w.hasCase;
   const href = internal ? `/work/${w.slug}` : w.url || "#";
   const Wrapper = internal ? Link : "a";
@@ -23,6 +23,7 @@ export default function WorkCard({ w, priority = false, sizes = "(min-width:1024
             alt=""
             fill
             sizes={sizes}
+            quality={95}
             priority={priority}
             className="object-cover object-top transition-transform duration-700 group-hover:scale-[1.03]"
           />
