@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { getAdminSession } from "../../../../lib/auth";
 import { getServiceClient } from "../../../../lib/supabase";
 import { clipOrNull, isMissingSchema, MIGRATION_HINT, refreshSite } from "../_util";
+import { sanitizeBlocks, storagePathsFrom } from "../../../../lib/blocks";
+import { WORK_DEFAULTS } from "../../../../lib/content";
+import { slugify } from "../../../../lib/data";
 
 async function auth() {
   const session = await getAdminSession();
@@ -9,7 +12,12 @@ async function auth() {
   return getServiceClient();
 }
 
-const OPTIONAL_TEXT = { category: 120, summary: 500, result: 500, case_study: 20000, image_url: 1000, tags: 300 };
+const OPTIONAL_TEXT = {
+  category: 120, summary: 500, result: 500, case_study: 20000, image_url: 1000, tags: 300,
+  client_name: 120, year: 20, timeline: 120, services: 300,
+};
+// Yes/no switches added with the project-page upgrade. Missing = default (see supabase-migration.sql).
+const SWITCHES = ["show_card", "show_logo", "show_stack", "is_hero"];
 
 // Normalises optional work-page fields. Empty -> null (clears), undefined -> omitted.
 function workFields(body, { omitEmpty }) {
@@ -24,13 +32,41 @@ function workFields(body, { omitEmpty }) {
     out[key] = val;
   }
   if (body.featured !== undefined && (!omitEmpty || body.featured === true)) out.featured = body.featured === true;
+  for (const key of SWITCHES) {
+    if (typeof body[key] === "boolean") out[key] = body[key];
+  }
+  if (body.blocks !== undefined) {
+    const blocks = sanitizeBlocks(body.blocks);
+    if (!omitEmpty || blocks.length) out.blocks = blocks;
+  }
   return out;
+}
+
+// Only one project can be the home-page hero: switching one on switches the others off.
+async function enforceSingleHero(supabase, row) {
+  if (row?.is_hero === true && row.id) {
+    await supabase.from("brands").update({ is_hero: false }).neq("id", row.id);
+  }
 }
 
 function failure(error) {
   if (isMissingSchema(error))
     return NextResponse.json({ error: MIGRATION_HINT, migration: true }, { status: 500 });
   return NextResponse.json({ error: error.message }, { status: 500 });
+}
+
+// Adds read-only helpers for the Vault list: the page address, whether a project page exists,
+// and the built-in text/image used when a field is left empty. Never written back to the database.
+function decorate(row) {
+  const slug = slugify(row.name);
+  const d = WORK_DEFAULTS[slug] || {};
+  const hasPage = !!((row.summary || "").trim() || d.summary || sanitizeBlocks(row.blocks).length);
+  return {
+    ...row,
+    _slug: slug,
+    _has_page: hasPage,
+    _defaults: { category: d.category || "", summary: d.summary || "", image: d.image || "", tags: (d.tags || []).join(", ") },
+  };
 }
 
 // ─── GET all brands (admin sees all, including inactive) ───────────────────
@@ -46,7 +82,7 @@ export async function GET() {
 
   if (error)
     return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  return NextResponse.json((data || []).map(decorate));
 }
 
 // ─── POST create brand (supports JSON body with logo_url string) ───────────
@@ -80,6 +116,7 @@ export async function POST(req) {
     .single();
 
   if (error) return failure(error);
+  await enforceSingleHero(supabase, data);
   refreshSite();
   return NextResponse.json(data);
 }
@@ -124,6 +161,7 @@ export async function PATCH(req) {
     .single();
 
   if (error) return failure(error);
+  await enforceSingleHero(supabase, data);
   refreshSite();
   return NextResponse.json(data);
 }
@@ -140,22 +178,21 @@ export async function DELETE(req) {
   if (!id)
     return NextResponse.json({ error: "id is required" }, { status: 400 });
 
-  // Fetch brand first so we can clean up storage
+  // Fetch the brand first so every file it uploaded (logo, cover, gallery images) can be removed too.
   const { data: brand } = await supabase
     .from("brands")
-    .select("logo_url")
+    .select("*")
     .eq("id", id)
     .single();
 
-  // If logo is stored in our Supabase bucket, delete the file too
-  if (brand?.logo_url) {
-    const supabaseStorageHost = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (brand.logo_url.includes(supabaseStorageHost)) {
-      // Extract path after /brand-logos/
-      const match = brand.logo_url.match(/brand-logos\/(.+)$/);
-      if (match?.[1]) {
-        await supabase.storage.from("brand-logos").remove([match[1]]);
-      }
+  if (brand) {
+    const urls = [brand.logo_url, brand.image_url];
+    for (const b of sanitizeBlocks(brand.blocks)) {
+      if (b.type === "gallery") urls.push(...b.images.map((im) => im.url));
+    }
+    const paths = storagePathsFrom(urls, process.env.NEXT_PUBLIC_SUPABASE_URL);
+    if (paths.length) {
+      try { await supabase.storage.from("brand-logos").remove(paths); } catch {}
     }
   }
 

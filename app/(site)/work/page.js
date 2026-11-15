@@ -16,8 +16,10 @@ export const metadata = pageMeta({
 
 export default async function WorkPage() {
   const work = await getWork();
-  const withVisual = work.filter((w) => w.image);
-  const logoOnly = work.filter((w) => !w.image);
+  // Only projects switched on as a card (Vault -> Brands) are listed here.
+  const cards = work.filter((w) => w.showCard);
+  const withVisual = cards.filter((w) => w.image);
+  const logoOnly = cards.filter((w) => !w.image);
   // Avoid an orphan card: 3 columns only when the count divides evenly.
   const cols = withVisual.length % 3 === 0 ? "lg:grid-cols-3" : "lg:grid-cols-2";
 
@@ -35,16 +37,16 @@ export default async function WorkPage() {
         <div className="container-x">
           <h2 className="sr-only">Projects</h2>
           <div className={`grid gap-6 md:grid-cols-2 ${cols}`}>
-            {withVisual.map((w, i) => <WorkCard key={w.id} w={w} priority={i < 3} />)}
+            {withVisual.map((w, i) => <WorkCard key={w.id} w={w} motion="page" index={i} priority={i < 3} />)}
           </div>
 
           {logoOnly.length > 0 && (
             <div className="mt-16">
               <h2 className="eyebrow">More clients</h2>
               <ul className={`mt-6 grid gap-6 md:grid-cols-2 ${cols}`}>
-                {logoOnly.map((w) => (
+                {logoOnly.map((w, i) => (
                   <li key={w.id}>
-                    <WorkCard w={w} />
+                    <WorkCard w={w} motion="page" index={i} />
                   </li>
                 ))}
               </ul>

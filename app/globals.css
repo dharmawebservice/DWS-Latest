@@ -40,6 +40,7 @@
 
 html {
   scroll-padding-top: 88px;
+  overflow-x: clip;
   background: var(--color-bg);
   color-scheme: light;
   -webkit-text-size-adjust: 100%;
@@ -268,8 +269,83 @@ select.field { cursor: pointer; appearance: none;
 }
 .prose-dws.blog p, .prose-dws.blog li { font-size: 1.06rem; line-height: 1.8; }
 
-/* Scroll reveal intentionally omitted: static content is faster and always fully legible. */
+/* ── Scroll-linked card motion (see ScrollMotion.js) ─────────────
+   --p (0..1) is set by script from the card's position in the window, so cards move only while
+   scrolling and reverse when scrolling back. Once a card has come in and is scrolled past, it stays
+   fully visible. Without JS, or with reduced motion, nothing is hidden. Transform / opacity / clip
+   only: no layout shift. [data-done] (p = 1) drops every effect so hover works normally.
+   hw  Home work     "Pinboard"    cards start tilted and scattered like pinned photos, then straighten
+   pw  Work page     "Shelf pull"  each card is pulled up out of a dark shelf edge
+   hp  Home pricing  "Fan-out"     a stacked deck spreads into three plans (unchanged)
+   pp  Pricing page  "Stamp press" plans drop from above and press onto the page, price counts up, ticks draw
+   ps  Pricing page  strip         the "at a glance" items slide in one by one */
 .reveal { }
+.sr-shelf { display: none; }
+@media (prefers-reduced-motion: no-preference) {
+  /* ---------- hw: pinboard ---------- */
+  .sr [data-sr="hw"]:not([data-done]) {
+    transform: translate(calc((1 - var(--p, 1)) * var(--dx, 0) * 1px), calc((1 - var(--p, 1)) * 34px)) rotate(calc((1 - var(--p, 1)) * var(--rot, 0) * 1deg));
+    will-change: transform;
+  }
+
+  /* ---------- pw: shelf pull ---------- */
+  .sr [data-sr="pw"]:not([data-done]) { overflow: hidden; }
+  .sr [data-sr="pw"]:not([data-done]) > a { transform: translateY(calc((1 - var(--p, 1)) * 108%)); will-change: transform; }
+  .sr [data-sr="pw"] .sr-shelf {
+    display: block; position: absolute; left: -3px; right: -3px; bottom: 0; height: 6px; z-index: 2; pointer-events: none;
+    background: var(--color-ink); border-top: 2px solid var(--color-gold);
+    opacity: min(1, calc((1 - var(--p, 1)) * 6));
+  }
+
+  /* ---------- hp: fan-out ---------- */
+  .sr [data-sr="hp"] {
+    transform: translateY(calc((1 - var(--p, 1)) * 56px)) rotate(calc((1 - var(--p, 1)) * var(--s, 1) * 4deg));
+    opacity: calc(.25 + .75 * var(--p, 1));
+    will-change: transform, opacity;
+  }
+  @media (min-width: 768px) {
+    .sr [data-sr="hp"][data-fan="3"] {
+      transform: translateX(calc((1 - var(--p, 1)) * var(--k, 0) * 104%)) translateY(calc((1 - var(--p, 1)) * 28px))
+                 rotate(calc((1 - var(--p, 1)) * var(--k, 0) * -8deg));
+      opacity: 1; z-index: var(--z, 1);
+    }
+  }
+  @media (min-width: 1280px) {
+    .sr [data-sr="hp"][data-fan="4"] {
+      transform: translateX(calc((1 - var(--p, 1)) * var(--k, 0) * 104%)) translateY(calc((1 - var(--p, 1)) * 28px))
+                 rotate(calc((1 - var(--p, 1)) * var(--k, 0) * -7deg));
+      opacity: 1; z-index: var(--z, 1);
+    }
+  }
+
+  /* ---------- pp: stamp press ---------- */
+  .sr [data-sr="pp"]:not([data-done]) {
+    transform: translateY(calc((1 - var(--b, 1)) * -48px)) scale(calc(1 + (1 - var(--b, 1)) * .09));
+    opacity: calc(.3 + .7 * min(1, var(--p, 1) * 1.6));
+    box-shadow: 0 calc(10px + (1 - var(--p, 1)) * 46px) calc(22px + (1 - var(--p, 1)) * 50px) -20px rgba(20, 33, 61, .38);
+    will-change: transform;
+  }
+  .sr [data-sr="pp"]::before {
+    content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; pointer-events: none;
+    background: var(--color-gold); transform: scaleX(var(--p, 1)); transform-origin: 0 50%;
+  }
+  .sr [data-sr="pp"].on-navy::before { background: var(--color-gold-light); }
+  .sr [data-sr="pp"] .sr-feats li {
+    --a: clamp(0, calc(var(--p, 1) * 2.4 - .6 - var(--f, 0) * .1), 1);
+    opacity: calc(.25 + .75 * var(--a)); translate: calc((1 - var(--a)) * -12px) 0;
+  }
+  .sr [data-sr="pp"] .sr-feats li svg path { stroke-dasharray: 24; stroke-dashoffset: calc((1 - var(--a)) * 24); }
+  .sr [data-sr="pp"] .sr-feats li:nth-child(1) { --f: 0 } .sr [data-sr="pp"] .sr-feats li:nth-child(2) { --f: 1 }
+  .sr [data-sr="pp"] .sr-feats li:nth-child(3) { --f: 2 } .sr [data-sr="pp"] .sr-feats li:nth-child(4) { --f: 3 }
+  .sr [data-sr="pp"] .sr-feats li:nth-child(5) { --f: 4 } .sr [data-sr="pp"] .sr-feats li:nth-child(6) { --f: 5 }
+  .sr [data-sr="pp"] .sr-feats li:nth-child(n+7) { --f: 6 }
+
+  /* ---------- ps: at-a-glance strip ---------- */
+  .sr [data-sr="ps"] {
+    --a: clamp(0, calc(var(--p, 1) * 2.2 - var(--j, 0) * .28), 1);
+    opacity: calc(.15 + .85 * var(--a)); translate: calc((1 - var(--a)) * -18px) 0;
+  }
+}
 
 /* ═══════════════════════════════════════════════════════════════
    Dharma Vault (admin) — shared light styles

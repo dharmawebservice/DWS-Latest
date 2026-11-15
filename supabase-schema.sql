@@ -95,6 +95,20 @@ ALTER TABLE brands ADD COLUMN IF NOT EXISTS image_url  TEXT;
 ALTER TABLE brands ADD COLUMN IF NOT EXISTS tags       TEXT;  -- comma separated
 ALTER TABLE brands ADD COLUMN IF NOT EXISTS featured   BOOLEAN DEFAULT false;
 
+-- ---- BRANDS: richer project pages (added with the Vault "Brands & Projects" upgrade) ----
+-- Facts card on the project page
+ALTER TABLE brands ADD COLUMN IF NOT EXISTS client_name TEXT;
+ALTER TABLE brands ADD COLUMN IF NOT EXISTS year        TEXT;
+ALTER TABLE brands ADD COLUMN IF NOT EXISTS timeline    TEXT;
+ALTER TABLE brands ADD COLUMN IF NOT EXISTS services    TEXT;  -- comma separated
+-- Extra page sections built in the Vault (text, lists, numbers, gallery, quote)
+ALTER TABLE brands ADD COLUMN IF NOT EXISTS blocks      JSONB DEFAULT '[]'::jsonb;
+-- Where this brand appears on the public site
+ALTER TABLE brands ADD COLUMN IF NOT EXISTS show_card   BOOLEAN DEFAULT true;   -- project card on Work + Home
+ALTER TABLE brands ADD COLUMN IF NOT EXISTS show_logo   BOOLEAN DEFAULT true;   -- "Trusted by" logo strip
+ALTER TABLE brands ADD COLUMN IF NOT EXISTS show_stack  BOOLEAN DEFAULT true;   -- "Built with" tags on its page
+ALTER TABLE brands ADD COLUMN IF NOT EXISTS is_hero     BOOLEAN DEFAULT false;  -- image beside the home headline
+
 -- ---- MESSAGES: service picked in the contact form + private notes ----
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS service TEXT;
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS notes   TEXT;

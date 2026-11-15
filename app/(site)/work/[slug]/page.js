@@ -8,6 +8,7 @@ import JsonLd from "../../../components/JsonLd";
 import PageHero from "../../../components/PageHero";
 import WorkCard from "../../../components/WorkCard";
 import CtaBand from "../../../components/CtaBand";
+import ProjectBlocks, { LeadBlocks, splitBlocks } from "../../../components/ProjectBlocks";
 
 export const revalidate = 300;
 
@@ -20,9 +21,10 @@ export async function generateMetadata({ params }) {
   const { slug } = await params;
   const w = await getWorkBySlug(slug);
   if (!w || !w.hasCase) return { title: "Project not found", robots: { index: false, follow: false } };
+  const firstText = w.blocks.find((b) => b.type === "text" && b.body)?.body || "";
   return pageMeta({
     title: `${w.name} — ${w.category || "Project"} Case Study`,
-    description: w.summary.slice(0, 158),
+    description: (w.summary || firstText || `${w.name}, a website built by Dharma Web Services.`).slice(0, 158),
     path: `/work/${w.slug}`,
   });
 }
@@ -31,7 +33,8 @@ export default async function CaseStudy({ params }) {
   const { slug } = await params;
   const [w, all] = await Promise.all([getWorkBySlug(slug), getWork()]);
   if (!w || !w.hasCase) notFound();
-  const more = all.filter((x) => x.hasCase && x.image && x.slug !== w.slug).slice(0, 3);
+  const more = all.filter((x) => x.hasCase && x.image && x.showCard && x.slug !== w.slug).slice(0, 3);
+  const { lead, rest } = splitBlocks(w.blocks);
   const paragraphs = w.caseStudy ? w.caseStudy.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean) : [];
 
   return (
@@ -63,15 +66,25 @@ export default async function CaseStudy({ params }) {
           <div className="mt-14 grid gap-12 lg:grid-cols-12">
             <div className="prose-dws blog lg:col-span-8">
               <h2 className="!mt-0">About the project</h2>
-              <p>{w.summary}</p>
+              {w.summary && <p>{w.summary}</p>}
               {w.result && (<><h2>Result</h2><p>{w.result}</p></>)}
               {paragraphs.map((p) => <p key={p.slice(0, 40)}>{p}</p>)}
+              <LeadBlocks blocks={lead} />
             </div>
-            <aside className="lg:col-span-4">
+            <aside className="lg:sticky lg:top-28 lg:col-span-4 lg:self-start">
               <div className="card p-7 text-sm">
                 <dl className="space-y-5">
+                  {w.client && (<div><dt className="font-semibold text-ink">Client</dt><dd className="mt-1 text-ink-2">{w.client}</dd></div>)}
                   {w.category && (<div><dt className="font-semibold text-ink">Category</dt><dd className="mt-1 text-ink-2">{w.category}</dd></div>)}
-                  {w.tags.length > 0 && (
+                  {w.year && (<div><dt className="font-semibold text-ink">Year</dt><dd className="mt-1 text-ink-2">{w.year}</dd></div>)}
+                  {w.timeline && (<div><dt className="font-semibold text-ink">Timeline</dt><dd className="mt-1 text-ink-2">{w.timeline}</dd></div>)}
+                  {w.services.length > 0 && (
+                    <div>
+                      <dt className="font-semibold text-ink">What we did</dt>
+                      <dd className="mt-1 text-ink-2">{w.services.join(" · ")}</dd>
+                    </div>
+                  )}
+                  {w.showStack && w.tags.length > 0 && (
                     <div>
                       <dt className="font-semibold text-ink">Built with</dt>
                       <dd className="mt-2"><ul className="flex flex-wrap gap-1.5">{w.tags.map((t) => <li key={t} className="chip">{t}</li>)}</ul></dd>
@@ -84,6 +97,8 @@ export default async function CaseStudy({ params }) {
           </div>
         </div>
       </section>
+
+      <ProjectBlocks blocks={rest} name={w.name} />
 
       {more.length > 0 && (
         <section className="section-tight border-t border-line" aria-label="More projects">

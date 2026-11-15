@@ -27,12 +27,14 @@ export default async function Home() {
   const [work, plans, testimonials] = await Promise.all([getWork(), getPackages(), getTestimonials()]);
 
   const withImage = work.filter((w) => w.image);
-  // Cards skip projects flagged hideCard (Kaivalya). The hero below still finds it in withImage.
-  const cardWork = withImage.filter((w) => !w.hideCard);
+  // Cards: only projects switched on as a card in the Vault, featured ones first.
+  const cardWork = withImage.filter((w) => w.showCard);
   const featured = [...cardWork.filter((w) => w.featured), ...cardWork.filter((w) => !w.featured)].slice(0, 4);
-  // Project shown beside the headline. Change HERO_SLUG in lib/content.js to show another one.
-  const heroShot = withImage.find((w) => w.slug === HERO_SLUG) || withImage[0];
-  const logos = work.filter((w) => w.logo);
+  // Project shown beside the headline: the one marked "home-page hero" in the Vault,
+  // otherwise HERO_SLUG from lib/content.js. It does not need to be shown as a card.
+  const heroShot =
+    withImage.find((w) => w.isHero) || withImage.find((w) => w.slug === HERO_SLUG) || cardWork[0] || withImage[0];
+  const logos = work.filter((w) => w.logo && w.showLogo);
 
   return (
     <>
@@ -126,7 +128,7 @@ export default async function Home() {
           <div className="container-x">
             <SectionHead no="02" eyebrow="Selected work" title={<span id="work-h">Real projects, <em>real clients</em></span>} />
             <div className="mt-14 grid gap-6 md:grid-cols-2">
-              {featured.map((w) => <WorkCard key={w.id} w={w} />)}
+              {featured.map((w, i) => <WorkCard key={w.id} w={w} index={i} motion="home" />)}
             </div>
             <div className="mt-10 flex justify-center">
               <Link href="/work" className="btn btn-ghost">
@@ -190,7 +192,7 @@ export default async function Home() {
             title={<span id="pricing-h">Simple, <em>transparent</em> pricing</span>}
             lede="One-time payment. No subscriptions. No hidden charges. You own everything."
           />
-          <div className="mt-16"><PackageCards plans={plans} /></div>
+          <div className="mt-16"><PackageCards plans={plans} motion="home" /></div>
           <p className="mt-12 text-center text-sm text-mute">
             Need something custom?{" "}
             <Link href="/contact" className="link-underline font-medium text-ink">Let&apos;s talk</Link>

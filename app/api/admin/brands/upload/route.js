@@ -25,17 +25,20 @@ export async function POST(req) {
       );
     }
 
-    // Validate file size (max 2MB)
-    const maxSize = 2 * 1024 * 1024;
+    // Validate file size (max 4MB). The Vault shrinks screenshots to a crisp WebP before
+    // uploading, so real uploads are far smaller; 4MB stays under the host's request limit.
+    const maxSize = 4 * 1024 * 1024;
     if (file.size > maxSize) {
       return NextResponse.json(
-        { error: "File too large. Maximum size is 2MB." },
+        { error: "File too large. Maximum size is 4MB." },
         { status: 400 }
       );
     }
 
     // Build a unique filename: timestamp + sanitised original name
-    const ext = file.name.split(".").pop().toLowerCase();
+    // The extension comes from the verified file type, not from the file name.
+    const EXT = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/svg+xml": "svg", "image/gif": "gif" };
+    const ext = EXT[file.type];
     const safeName = file.name
       .replace(/\.[^/.]+$/, "")           // remove extension
       .replace(/[^a-zA-Z0-9-_]/g, "-")   // sanitise

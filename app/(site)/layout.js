@@ -2,6 +2,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import WhatsApp from "../components/WhatsApp";
 import LazyWidgets from "../components/LazyWidgets";
+import ScrollMotion from "../components/ScrollMotion";
 import StickyBar from "../components/StickyBar";
 
 // Chrome shared by every public page. The Vault and onboarding links sit
@@ -16,6 +17,7 @@ export default function SiteLayout({ children }) {
       <WhatsApp />
       <StickyBar />
       <LazyWidgets />
+      <ScrollMotion />
     </>
   );
 }

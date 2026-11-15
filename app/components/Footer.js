@@ -17,14 +17,14 @@ const LEGAL = [
   { label: "Cookie policy", href: "/cookies" },
 ];
 
-function Col({ title, items, span = "lg:col-span-2" }) {
+function Col({ title, items }) {
   return (
-    <div className={span}>
-      <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-gold-light">{title}</p>
-      <ul className="mt-4 space-y-1">
+    <div>
+      <p className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-gold-light">{title}</p>
+      <ul className="mt-4 space-y-0.5">
         {items.map(({ label, href }) => (
           <li key={href}>
-            <Link href={href} prefetch={false} className="link-underline inline-block py-2 text-[0.92rem] text-[#faf7f0]/80 transition-colors hover:text-white">
+            <Link href={href} prefetch={false} className="inline-block py-1.5 text-[0.9rem] text-[#faf7f0]/70 transition-colors hover:text-gold-light">
               {label}
             </Link>
           </li>
@@ -34,48 +34,55 @@ function Col({ title, items, span = "lg:col-span-2" }) {
   );
 }
 
+const linkCls = "inline-flex min-h-11 items-center text-[0.88rem] text-[#faf7f0]/70 transition-colors hover:text-gold-light";
+
 export default function Footer() {
   return (
-    <footer className="on-navy">
-      <div className="container-x py-14 sm:py-18">
-        <div className="grid gap-12 lg:grid-cols-12">
-          <div className="lg:col-span-5">
-            <Link href="/" className="inline-flex" aria-label="Dharma Web Services — home">
-              <span className="inline-flex bg-bg px-3 py-2"><Image src="/dws-mark.png" alt="" width={480} height={327} sizes="72px" className="h-9 w-auto" /></span>
+    <footer className="on-navy relative">
+      <div aria-hidden="true" className="h-px bg-gradient-to-r from-transparent via-gold/60 to-transparent" />
+      <div className="container-x pb-6 pt-12 sm:pt-14">
+        <div className="grid gap-10 lg:grid-cols-12 lg:gap-8">
+          <div className="flex flex-col items-center text-center lg:col-span-4">
+            <Link href="/" className="inline-block" aria-label="Dharma Web Services — home">
+              <Image src="/dws-footer-logo.png" alt="" width={711} height={480} sizes="300px" quality={95} className="h-auto w-[150px] sm:w-[190px]" />
             </Link>
-            <p className="mt-6 max-w-xs font-display text-[1.9rem] leading-[1.12] text-[#faf7f0]">
-              Built quietly, <em>launched loudly.</em>
+            <p className="mt-4 text-[0.7rem] font-semibold uppercase tracking-[0.26em] text-gold-light sm:text-[0.74rem]">
+              Build <span aria-hidden="true">·</span> Innovate <span aria-hidden="true">·</span> Elevate
             </p>
-            <p className="mt-4 max-w-xs text-sm text-[#faf7f0]/70">
-              Fast, premium websites and web apps for growing businesses — made in {SITE.city}.
-            </p>
-            <ul className="mt-6 space-y-1.5 text-sm">
-              <li><a href={`mailto:${SITE.email}`} className="break-all text-[#faf7f0]/85 hover:text-white">{SITE.email}</a></li>
-              <li><a href={`tel:${SITE.phoneTel}`} className="text-[#faf7f0]/85 hover:text-white">{SITE.phoneDisplay}</a></li>
-              <li className="flex flex-wrap gap-x-6 pt-1">
-                <a href={SITE.whatsapp} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center py-2 pr-1 text-[#faf7f0]/85 hover:text-white">WhatsApp</a>
-                <a href={SITE.instagram} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center py-2 pr-1 text-[#faf7f0]/85 hover:text-white">Instagram</a>
-                <a href={SITE.x} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center py-2 pr-1 text-[#faf7f0]/85 hover:text-white">X</a>
-              </li>
-            </ul>
-            <div className="mt-8 max-w-sm">
-              <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-gold-light">Stay updated</p>
-              <p className="mt-3 text-sm text-[#faf7f0]/75">Offers and practical web tips. No spam.</p>
-              <NewsletterForm />
+            <div className="mt-2 flex flex-wrap justify-center gap-x-5">
+              <a href={SITE.whatsapp} target="_blank" rel="noopener noreferrer" className={linkCls}>WhatsApp</a>
+              <a href={SITE.instagram} target="_blank" rel="noopener noreferrer" className={linkCls}>Instagram</a>
+              <a href={SITE.x} target="_blank" rel="noopener noreferrer" className={linkCls}>X</a>
             </div>
           </div>
 
-          <Col title="Services" span="lg:col-span-3" items={SERVICES.map((s) => ({ label: s.title, href: `/services/${s.slug}` }))} />
-          <Col title="Company" items={COMPANY} />
-          <Col title="Legal" items={LEGAL} />
+          <div className="grid grid-cols-2 gap-x-6 lg:col-span-4 lg:pl-6">
+            <Col title="Services" items={SERVICES.map((s) => ({ label: s.title, href: `/services/${s.slug}` }))} />
+            <Col title="Company" items={COMPANY} />
+          </div>
 
+          <div className="lg:col-span-4">
+            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-gold-light">Get in touch</p>
+            <ul className="mt-3 space-y-0.5">
+              <li><a href={`mailto:${SITE.email}`} className="inline-block break-all py-1.5 text-[0.9rem] text-[#faf7f0]/80 transition-colors hover:text-gold-light">{SITE.email}</a></li>
+              <li><a href={`tel:${SITE.phoneTel}`} className="inline-block py-1.5 text-[0.9rem] text-[#faf7f0]/80 transition-colors hover:text-gold-light">{SITE.phoneDisplay}</a></li>
+            </ul>
+            <div className="mt-5">
+              <p className="text-[0.8rem] text-[#faf7f0]/55">Offers and practical web tips. No spam.</p>
+              <NewsletterForm />
+            </div>
+          </div>
         </div>
-      </div>
 
-      <div className="border-t border-[#faf7f0]/15">
-        <div className="container-x flex flex-col items-center justify-between gap-2 py-6 text-xs text-[#faf7f0]/65 sm:flex-row">
-          <p>© {new Date().getFullYear()} Dharma Web Services. All rights reserved.</p>
-          <p>Crafted in {SITE.city}</p>
+        <div className="mt-10 flex flex-col items-center justify-between gap-x-6 gap-y-1 border-t border-[#faf7f0]/10 pt-4 text-xs text-[#faf7f0]/50 md:flex-row">
+          <p>© {new Date().getFullYear()} Dharma Web Services · Crafted in {SITE.city}</p>
+          <ul className="flex flex-wrap justify-center gap-x-5">
+            {LEGAL.map(({ label, href }) => (
+              <li key={href}>
+                <Link href={href} prefetch={false} className="inline-flex min-h-10 items-center transition-colors hover:text-gold-light">{label}</Link>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </footer>

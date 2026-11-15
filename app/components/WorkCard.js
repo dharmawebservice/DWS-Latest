@@ -2,21 +2,30 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 
+const PIN_ROT = [-9, 6, -6, 8, -7, 5, -5, 9, -8];
+const PIN_DX = [-16, 12, 14, -12, 18, -10, 10, -16, 12];
+
 // One project. Links to the case-study page when there is one, otherwise to the live site.
-export default function WorkCard({ w, priority = false, sizes = "(min-width:1280px) 760px, (min-width:640px) 50vw, 100vw" }) {
+export default function WorkCard({ w, motion = "none", index = 0, priority = false, sizes = "(min-width:1280px) 760px, (min-width:640px) 50vw, 100vw" }) {
   const internal = w.hasCase;
   const href = internal ? `/work/${w.slug}` : w.url || "#";
   const Wrapper = internal ? Link : "a";
   // Case-study pages load when clicked, not in the background while the home page is still loading.
   const extra = internal ? { prefetch: false } : { target: "_blank", rel: "noopener noreferrer" };
 
+  const key = motion === "home" ? "hw" : motion === "page" ? "pw" : null;
   return (
+    <div
+      data-sr={key || undefined}
+      style={key === "hw" ? { "--rot": PIN_ROT[index % 9], "--dx": PIN_DX[index % 9] } : undefined}
+      className="relative h-full"
+    >
     <Wrapper
       href={href}
       {...extra}
-      className="card card-hover reveal group flex h-full flex-col overflow-hidden"
+      className="card card-hover group flex h-full flex-col overflow-hidden"
     >
-      <div className="relative aspect-[16/10] overflow-hidden border-b border-line bg-sand">
+      <div className="sr-media relative aspect-[16/10] overflow-hidden border-b border-line bg-sand">
         {w.image ? (
           <Image
             src={w.image}
@@ -35,7 +44,7 @@ export default function WorkCard({ w, priority = false, sizes = "(min-width:1280
           </span>
         )}
       </div>
-      <div className="flex flex-1 flex-col p-6">
+      <div className="sr-body flex flex-1 flex-col p-6">
         <div className="flex items-start justify-between gap-3">
           <div>
             {w.category && <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-gold-ink">{w.category}</p>}
@@ -51,5 +60,7 @@ export default function WorkCard({ w, priority = false, sizes = "(min-width:1280
         )}
       </div>
     </Wrapper>
+    <i aria-hidden="true" className="sr-shelf" />
+    </div>
   );
 }

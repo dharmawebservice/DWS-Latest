@@ -31,3 +31,20 @@
 
 - New Vault tab generating 7 client documents plus an internal pre-project checklist. API `/api/admin/docs` is behind the same JWT middleware; input keys, sizes and counts are limited. Preview runs in a sandboxed iframe; all user text is HTML-escaped.
 - Tested against a mock database: create, save, reload, select, Word download, PDF layout (11 A4 pages for 7 documents), missing-table message. No console errors.
+
+## Audit 15 Nov 2026: responsiveness + scroll motion
+- Responsive sweep: 13 pages x 11 widths (320, 360, 375, 390, 414, 768, 820, 1024, 1280, 1440, 1920): no horizontal scroll, no JS errors. Only tiny targets left are inline text links inside sentences (exempt from WCAG target-size). Footer email/phone got taller tap areas.
+- New two-way scroll motion (app/components/ScrollMotion.js + CSS in globals.css). Scroll down: cards enter. Scroll back up past them: they leave and replay. 
+  - Pricing: rise + gold rule draws across the top + features cascade; Pro card staggers last.
+  - Work: cards slide in from alternating sides, image revealed by a curtain wipe and settles from a slight zoom, text fades up.
+  - Uses only transform/opacity/clip-path (no layout shift). Hover lift unchanged. Hidden only after JS runs, so no-JS and prefers-reduced-motion users see everything normally. Phones use a simple upward rise.
+- Fixed: gold rule crossed the "Most popular" badge; badge now sits above it.
+- Not changed: eslint has no config file in the project (npm run lint is not set up).
+
+## 15 Nov 2026 (2): scroll-linked motion + lighter footer
+- Replaced the first animations. Cards now move only while scrolling (position-driven, reverses on scroll up). Four different styles: home work = tilt-up, work page = focus pull, home pricing = fan-out deck, pricing page = unroll + gold glint + feature tick-in.
+- Reduced-motion and no-JS visitors see static cards. Footer slimmed (3 columns, legal links in the bottom bar), larger light logo.
+
+## 15 Nov 2026 (3): final scroll motion
+- Home pricing fan-out untouched. Home work = "Iris" (photo opens like a camera aperture with a gold ring, text pulls into focus). Work page = "Book spread" (cards swing open on a spine). Pricing page = "Build-up" (cards rise, price counts up, gold ticks draw, top bar charges).
+- Cards stay fully visible once scrolled past. Checked at 390, 768, 1280 px: no sideways scroll, no console errors.
